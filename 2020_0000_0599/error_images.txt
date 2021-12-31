@@ -1,0 +1,10 @@
+0385/3928385.jpg: image file is truncated (45 bytes not processed)
+0989/2262989.jpg: file is damaged
+
+
+0985/30985.jpg: found 0 tags
+0988/2430988.jpg: found 0 tags
+0994/104994.jpg: found 0 tags
+0998/13998.jpg: found 0 tags
+0999/6999.jpg: found 0 tags
+0999/175999.jpg: found 0 tags
