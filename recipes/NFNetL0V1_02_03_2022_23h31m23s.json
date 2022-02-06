@@ -1,0 +1,9 @@
+{
+	"image_size": 320,
+    "out_classes": 2380,
+    "definition_name": "L0",
+    "cnn_attention": null,
+    "compensate_avgpool_var": true,
+    "activation": "relu",
+	"input_scaling": "inception"
+}
