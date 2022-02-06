@@ -18,14 +18,14 @@ Anonymous, The Danbooru Community, & Gwern Branwen; “Danbooru2021: A Large-Sca
 06/02/2022: great news crew! TRC allowed me to use a bunch of TPUs!
 
 To make better use of this amount of compute I had to overhaul a number of components, so a bunch of things are likely to have fallen to bitrot in the process.
-I can only guarantee NFNet can work pretty much as before with the right arguments.
-NFResNet changes *should* have left it retrocompatible with the previous version.
-ResNet has been streamlined to be mostly in line with the Bag-of-tricks paper ([arXiv:1812.01187](https://arxiv.org/abs/1812.01187)) with the exception of the stem. It is not compatible with the previous version of the code.
+I can only guarantee NFNet can work pretty much as before with the right arguments.  
+NFResNet changes *should* have left it retrocompatible with the previous version.  
+ResNet has been streamlined to be mostly in line with the Bag-of-Tricks paper ([arXiv:1812.01187](https://arxiv.org/abs/1812.01187)) with the exception of the stem. It is not compatible with the previous version of the code.
 
-The training labels have been included in the 2021_0000_0899 folder for convenience.
+The training labels have been included in the 2021_0000_0899 folder for convenience.  
 The list of files used for training is going to be uploaded as a GitHub Release.
 
-Now for some numbers:
+Now for some numbers:  
 compared to my previous best run, the one that resulted in [NFNetL1V1-100-0.57141](https://github.com/SmilingWolf/SW-CV-ModelZoo/releases/tag/NFNetL1V1-100-0.57141):
 - I'm using 1.86x the amount of images: 2.8M vs 1.5M
 - I'm training bigger models: 61M vs 45M params
@@ -41,8 +41,8 @@ I currently have a few runs in progress across a couple of dimensions:
 
 Once the experiments are over, the plan is to select the network definitions that lay on the Pareto curve between throughput and F1 score and release the trained weights.
 
-One last thing.
-I'd like to call your attention to the tools/cleanlab_stuff.py script.
-It reads two files: one with the binarized labels from the database, the other with the predicted probabilities.
-It then uses the [cleanlab](https://github.com/cleanlab/cleanlab) package to estimate whether if an image in a set could be missing a given label. At the end it stores its conclusions in a json file.
+One last thing.  
+I'd like to call your attention to the tools/cleanlab_stuff.py script.  
+It reads two files: one with the binarized labels from the database, the other with the predicted probabilities.  
+It then uses the [cleanlab](https://github.com/cleanlab/cleanlab) package to estimate whether if an image in a set could be missing a given label. At the end it stores its conclusions in a json file.  
 This file could, potentially, be used in some tool to assist human intervention to add the missing tags.
