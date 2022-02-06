@@ -4,6 +4,9 @@
 networks/
 checkpoints/
 
+# Image used for quick smoke tests
+82148729_p0.jpg
+
 # Bunch of files that have no place in version control
 2020_0000_0599/encoded_tags_test.npy
 2020_0000_0599/stats.txt

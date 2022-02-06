@@ -16,7 +16,7 @@ if __name__ == "__main__":
         samples = [x.rstrip() for x in f.readlines()]
 
     full_labels = np.load("2021_0000_0899/encoded_tags_test.npy")
-    full_psx = np.load("tags_probs_NFNetL0V1_01_29_2022_08h29m32s.npy")
+    full_psx = np.load("tags_probs_NFNetL1V1_01_29_2022_08h20m44s.npy")
 
     tags_actions = {}
 
@@ -32,7 +32,10 @@ if __name__ == "__main__":
         psx = np.stack([recip, psx], axis=1)
 
         ordered_label_errors = get_noise_indices(
-            s=train_labels_with_errors, psx=psx, sorted_index_method="normalized_margin"
+            s=train_labels_with_errors,
+            psx=psx,
+            sorted_index_method="normalized_margin",
+            n_jobs=1,
         )
 
         # On Danbooru a tag is more likely to be missing than to be wrong,
