@@ -1,0 +1,24 @@
+*.pyc
+*.npy
+
+networks/
+checkpoints/
+
+# Bunch of files that have no place in version control
+2020_0000_0599/encoded_tags_test.npy
+2020_0000_0599/stats.txt
+2020_0000_0599/origlist.txt
+2020_0000_0599/testlist.txt
+2020_0000_0599/trainlist.txt
+2020_0000_0599/SFW_cleanup/danboorufiles.txt
+2020_0000_0599/SFW_cleanup/filelist.txt
+2020_0000_0599/SFW_cleanup/purged.csv
+2020_0000_0599/SFW_cleanup/selected_tags.csv
+
+2021_0000_0899/encoded_tags_test.npy
+2021_0000_0899/testlist.txt
+2021_0000_0899/trainlist.txt
+2021_0000_0899/SFW_cleanup/danboorufiles.txt
+2021_0000_0899/SFW_cleanup/filelist.txt
+2021_0000_0899/SFW_cleanup/purged.csv
+2021_0000_0899/SFW_cleanup/selected_tags.csv
