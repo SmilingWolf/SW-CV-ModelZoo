@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-
 from tensorflow.keras.utils import Sequence
 
 
@@ -61,7 +60,9 @@ class DataGenerator(Sequence):
     def __data_generation(self, indexes):
         "Generates data containing batch_size samples"
         # Generate data
-        X = np.empty((len(indexes), self.dim[0], self.dim[1], self.n_channels))
+        X = np.empty(
+            (len(indexes), self.dim[0], self.dim[1], self.n_channels), dtype=np.uint8
+        )
 
         # Find list of IDs
         images_list_temp = [self.images_list[k] for k in indexes]
@@ -89,7 +90,5 @@ class DataGenerator(Sequence):
                 )
 
             X[i] = img
-
-        X = X.astype(np.float32) / 255
 
         return X

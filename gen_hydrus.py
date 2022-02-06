@@ -14,7 +14,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import tensorflow as tf
 
 from Generator.UpscalePred import DataGenerator
-from Models.NFNet import NFNetV1
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 if gpus:
@@ -25,15 +24,12 @@ if gpus:
         print(e)
 
 dim = 320
-thresh = 0.3485
+thresh = 0.3228
 images_folder = r"C:\images"
 
-label_names = pd.read_csv("2020_0000_0599/selected_tags.csv")
+label_names = pd.read_csv("2021_0000_0899/selected_tags.csv")
 
-model = NFNetV1(
-    in_shape=(dim, dim, 3), out_classes=2380, definition_name="L1", use_eca=False
-)
-model.load_weights("networks/NFNetL1V1-100-0.57141/variables/variables")
+model = tf.keras.models.load_model("networks/NFNetL1V1_01_29_2022_08h20m44s")
 model.trainable = False
 
 images_list = []

@@ -41,7 +41,7 @@ def gettags():
 
     request_json = request.get_json()
 
-    thresh = 0.3485 if "thresh" not in request_json else float(request_json["thresh"])
+    thresh = 0.3228 if "thresh" not in request_json else float(request_json["thresh"])
     img = request_json["image"]
     txt_img = base64.b64decode(img)
     np_img = np.frombuffer(txt_img, np.uint8)
@@ -49,7 +49,7 @@ def gettags():
     img = dbimutils.smart_24bit(img)
     img = dbimutils.make_square(img, dim)
     img = dbimutils.smart_resize(img, dim)
-    img = img.astype(np.float32) / 255
+    img = img.astype(np.float32)
     img = np.expand_dims(img, 0)
     probs = model.predict(img).numpy()
 
@@ -71,10 +71,17 @@ def gettags():
 if __name__ == "__main__":
     # Model is loaded when the API is launched
     dim = 320
-    model = NFNetV1((dim, dim, 3), 2380, "L1", use_eca=False)
-    model.load_weights(r"networks\NFNetL1V1-100-0.57141\variables\variables")
+    model = NFNetV1(
+        in_shape=(dim, dim, 3),
+        out_classes=2380,
+        definition_name="L1",
+        cnn_attention="eca",
+        compensate_avgpool_var=True,
+        activation="silu",
+    )
+    model.load_weights(r"networks\NFNetL1V1_01_29_2022_08h20m44s\variables\variables")
     model = JitModel(model)
 
-    label_names = pd.read_csv("2020_0000_0599/selected_tags.csv")
+    label_names = pd.read_csv("2021_0000_0899/selected_tags.csv")
 
     app.run(debug=False)

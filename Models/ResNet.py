@@ -1,151 +1,153 @@
-from tensorflow.keras import layers, regularizers
+import tensorflow as tf
 from tensorflow.keras.models import Model
 
-
-def formatName(prefix, name):
-    return (
-        ("%s_%s" % (prefix, name)) if prefix is not None and name is not None else None
-    )
+from .layers import Base, CNNAttention, ConvLayers
 
 
-def HeConv2D(x, filters=64, kernel_size=(3, 3), strides=(1, 1), name=None):
-    if kernel_size >= 3:
-        padding_name = ("%s_padding" % name) if name is not None else name
-        x = layers.ZeroPadding2D(
-            padding=(int(kernel_size / 2), int(kernel_size / 2)), name=padding_name
-        )(x)
-    x = layers.Conv2D(
-        filters,
-        kernel_size,
-        strides,
-        padding="valid",
-        use_bias=False,
-        kernel_initializer="he_normal",
-        kernel_regularizer=regularizers.l2(0.00005),
-        name=name,
-    )(x)
-    return x
+def ResBlock(
+    x,
+    filters=64,
+    strides=1,
+    cnn_attention=None,
+    stochdepth_rate=0.0,
+    prefix=None,
+):
+    in_channels = x.shape[-1]
 
+    out = x
 
-def ResBlockV2(x, filters=64, first=False, prefix=None):
-    x1 = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name=formatName(prefix, "batchnorm_01")
-    )(x)
-    x1 = layers.ReLU(name=formatName(prefix, "relu_01"))(x1)
-
-    x2 = x1
-
-    x1 = HeConv2D(x1, filters, kernel_size=1, name=formatName(prefix, "conv2d_01"))
-
-    x1 = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name=formatName(prefix, "batchnorm_02")
-    )(x1)
-    x1 = layers.ReLU(name=formatName(prefix, "relu_02"))(x1)
-    x1 = HeConv2D(x1, filters, kernel_size=3, name=formatName(prefix, "conv2d_02"))
-
-    x1 = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name=formatName(prefix, "batchnorm_03")
-    )(x1)
-    x1 = layers.ReLU(name=formatName(prefix, "relu_03"))(x1)
-    x1 = HeConv2D(x1, filters * 4, kernel_size=1, name=formatName(prefix, "conv2d_03"))
-
-    if first:
-        x2 = HeConv2D(
-            x2, filters * 4, kernel_size=1, name=formatName(prefix, "conv2d_shortcut")
+    if strides > 1 or in_channels != filters * 4:
+        if strides > 1:
+            shortcut = tf.keras.layers.AveragePooling2D(
+                padding="same",
+                name=Base.format_name(prefix, "averagepooling2d_shortcut"),
+            )(out)
+        else:
+            shortcut = out
+        shortcut = ConvLayers.PadConv2D(
+            shortcut,
+            filters=filters * 4,
+            kernel_size=1,
+            conv_type="gen_conv",
+            name=Base.format_name(prefix, "conv2d_shortcut"),
         )
-        x = x2 + x1
     else:
-        x = x + x1
-    return x
+        shortcut = x
 
+    out = ConvLayers.PadConv2D(
+        out,
+        filters=filters,
+        kernel_size=1,
+        conv_type="gen_conv",
+        name=Base.format_name(prefix, "conv2d_01"),
+    )
+    out = tf.keras.layers.BatchNormalization(name=Base.format_name(prefix, "bn_01"))(
+        out
+    )
+    out = tf.keras.layers.ReLU(name=Base.format_name(prefix, "relu_01"))(out)
 
-def DownBlockV2(x, filters=64, prefix=None):
-    x = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name=formatName(prefix, "batchnorm_01")
-    )(x)
-    x = layers.ReLU(name=formatName(prefix, "relu_01"))(x)
+    out = ConvLayers.PadConv2D(
+        out,
+        filters=filters,
+        kernel_size=3,
+        strides=strides,
+        conv_type="gen_conv",
+        name=Base.format_name(prefix, "conv2d_02"),
+    )
+    out = tf.keras.layers.BatchNormalization(name=Base.format_name(prefix, "bn_02"))(
+        out
+    )
+    out = tf.keras.layers.ReLU(name=Base.format_name(prefix, "relu_02"))(out)
 
-    x2 = x
-
-    x1 = HeConv2D(x, filters, kernel_size=1, name=formatName(prefix, "conv2d_01"))
-
-    x1 = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name=formatName(prefix, "batchnorm_02")
-    )(x1)
-    x1 = layers.ReLU(name=formatName(prefix, "relu_02"))(x1)
-    x1 = HeConv2D(
-        x1, filters, kernel_size=3, strides=2, name=formatName(prefix, "conv2d_02")
+    out = ConvLayers.PadConv2D(
+        out,
+        filters=filters * 4,
+        kernel_size=1,
+        conv_type="gen_conv",
+        name=Base.format_name(prefix, "conv2d_03"),
+    )
+    out = tf.keras.layers.BatchNormalization(name=Base.format_name(prefix, "bn_03"))(
+        out
     )
 
-    x1 = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name=formatName(prefix, "batchnorm_03")
-    )(x1)
-    x1 = layers.ReLU(name=formatName(prefix, "relu_03"))(x1)
-    x1 = HeConv2D(x1, filters * 4, kernel_size=1, name=formatName(prefix, "conv2d_03"))
+    if cnn_attention == "se":
+        out = CNNAttention.se_block(out, filters * 4) * out
+    elif cnn_attention == "eca":
+        out = CNNAttention.eca_block(out, filters * 4) * out
 
-    x2 = layers.AveragePooling2D(
-        padding="same", name=formatName(prefix, "averagepooling2d_shortcut")
-    )(x2)
-    x2 = HeConv2D(
-        x2, filters * 4, kernel_size=1, name=formatName(prefix, "conv2d_shortcut")
-    )
+    if stochdepth_rate > 0.0:
+        out = Base.StochDepth(drop_rate=stochdepth_rate, scale_by_keep=True)(out)
 
-    x = x2 + x1
-    return x
+    out = Base.SkipInit()(out)
+
+    out = tf.keras.layers.Add()([out, shortcut])
+    out = tf.keras.layers.ReLU(name=Base.format_name(prefix, "relu_03"))(out)
+    return out
 
 
-def ResNet50V4(in_shape=(320, 320, 3), out_classes=2000):
-    img_input = layers.Input(shape=in_shape)
+definitions = {
+    "50": {"blocks": [3, 4, 6, 3], "filters": [64, 128, 256, 512]},
+    "101": {"blocks": [3, 4, 23, 3], "filters": [64, 128, 256, 512]},
+    "152": {"blocks": [3, 8, 36, 3], "filters": [64, 128, 256, 512]},
+}
+
+
+def ResNetV1(
+    in_shape=(320, 320, 3),
+    out_classes=2000,
+    definition_name="50",
+    cnn_attention=None,
+):
+    stochdepth_rate = 0.1
+    definition = definitions[definition_name]
+
+    num_blocks = sum(definition["blocks"])
+
+    img_input = tf.keras.layers.Input(shape=in_shape)
 
     # Root block / "stem"
-    x = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name="root_batchnorm_01"
-    )(img_input)
-    x = HeConv2D(x, filters=64, kernel_size=7, strides=2, name="root_conv2d_01")
-    x = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name="root_batchnorm_02"
-    )(x)
-    x = layers.ReLU(name="root_relu_01")(x)
-    x = layers.ZeroPadding2D(padding=(1, 1), name="root_maxpooling2d_01_pad")(x)
-    x = layers.MaxPooling2D(
+    x = ConvLayers.PadConv2D(
+        img_input,
+        filters=64,
+        kernel_size=7,
+        strides=2,
+        use_bias=False,
+        conv_type="gen_conv",
+        name="root_conv2d_01",
+    )
+    x = tf.keras.layers.BatchNormalization(name="root_bn_01")(x)
+    x = tf.keras.layers.ZeroPadding2D(padding=(1, 1), name="root_maxpooling2d_01_pad")(
+        x
+    )
+    x = tf.keras.layers.MaxPooling2D(
         (3, 3), strides=(2, 2), padding="valid", name="root_maxpooling2d_01"
     )(x)
 
-    # Block 1
-    x = ResBlockV2(x, filters=64, first=True, prefix="block01_cell01")
-    x = ResBlockV2(x, filters=64, prefix="block01_cell02")
-    x = ResBlockV2(x, filters=64, prefix="block01_cell03")
-
-    # Block 2
-    x = DownBlockV2(x, filters=128, prefix="block02_cell01")
-    x = ResBlockV2(x, filters=128, prefix="block02_cell02")
-    x = ResBlockV2(x, filters=128, prefix="block02_cell03")
-    x = ResBlockV2(x, filters=128, prefix="block02_cell04")
-
-    # Block 3
-    x = DownBlockV2(x, filters=256, prefix="block03_cell01")
-    x = ResBlockV2(x, filters=256, prefix="block03_cell02")
-    x = ResBlockV2(x, filters=256, prefix="block03_cell03")
-    x = ResBlockV2(x, filters=256, prefix="block03_cell04")
-    x = ResBlockV2(x, filters=256, prefix="block03_cell05")
-    x = ResBlockV2(x, filters=256, prefix="block03_cell06")
-
-    # Block 4
-    x = DownBlockV2(x, filters=512, prefix="block04_cell01")
-    x = ResBlockV2(x, filters=512, prefix="block04_cell02")
-    x = ResBlockV2(x, filters=512, prefix="block04_cell03")
+    index = 0
+    full_index = 0
+    for stage_depth, block_width in zip(definition["blocks"], definition["filters"]):
+        for block_index in range(stage_depth):
+            block_stochdepth_rate = stochdepth_rate * full_index / num_blocks
+            x = ResBlock(
+                x,
+                block_width,
+                strides=2 if (block_index == 0 and index > 0) else 1,
+                cnn_attention=cnn_attention,
+                stochdepth_rate=block_stochdepth_rate,
+                prefix="block%d_cell%d" % (index, block_index),
+            )
+            full_index += 1
+        index += 1
 
     # Classification block
-    x = layers.BatchNormalization(
-        momentum=0.9, epsilon=0.00001, axis=3, name="predictions_batchnorm"
-    )(x)
-    x = layers.ReLU(name="predictions_relu")(x)
-    x = layers.GlobalAveragePooling2D(name="predictions_globalavgpooling")(x)
+    x = tf.keras.layers.GlobalAveragePooling2D(name="predictions_globalavgpooling")(x)
+    x = tf.keras.layers.Dropout(0.25)(x)
 
-    x = layers.Dense(
-        out_classes, kernel_initializer="he_normal", name="predictions_dense"
+    dense_init = tf.keras.initializers.RandomNormal(mean=0.0, stddev=0.01)
+    x = tf.keras.layers.Dense(
+        out_classes, kernel_initializer=dense_init, name="predictions_dense"
     )(x)
-    x = layers.Activation("sigmoid", name="predictions_sigmoid")(x)
+    x = tf.keras.layers.Activation("sigmoid", name="predictions_sigmoid")(x)
 
-    model = Model(img_input, x, name="ResNet50V4")
+    model = Model(img_input, x, name="ResNet%sV1" % definition_name)
     return model

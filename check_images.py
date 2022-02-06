@@ -2,11 +2,12 @@
 # Log the ones that are to a text file
 
 from PIL import Image
+from tqdm import tqdm
 
-images_list = open("2020_0000_0599/trainlist.txt").readlines()
-images_list = [x.rstrip() for x in images_list]
+images_list = open("2021_0000_0899/testlist.txt").readlines()
+images_list = [r"F:\MLArchives\danbooru2021\512px\%s" % x.rstrip() for x in images_list]
 
-for filename in images_list:
+for filename in tqdm(images_list):
     try:
         img = Image.open(filename)  # open the image file
         img.verify()  # verify that it is a good image, without decoding it.. quite fast
@@ -17,5 +18,5 @@ for filename in images_list:
         )  # apply a simple transform to trigger all the other checks
         img.close()
     except Exception as e:
-        with open("error_images.log", "w") as outfile:
+        with open("error_images.log", "a") as outfile:
             outfile.write("%s: %s\n" % (filename, str(e)))

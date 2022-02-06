@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 
-tags = pd.read_csv("2020_0000_0599/selected_tags.csv")
-label = np.load("2020_0000_0599/encoded_tags_test.npy")
+tags = pd.read_csv("2021_0000_0899/selected_tags.csv")
+label = np.load("2021_0000_0899/encoded_tags_test.npy")
 
-factor = 0.3485
+factor = 0.3228
 eps = np.finfo(np.float32).eps
-preds = np.load("tags_probs_NFNetL1V1-100-0.57141.npy")
+preds = np.load("tags_probs_NFNetL1V1_01_29_2022_08h20m44s.npy")
 preds = (preds > factor).astype(np.uint8)
 
 actual_freq = np.sum(label, axis=0) / label.shape[0]

@@ -1,0 +1,2 @@
+/mnt/data/danbooru2021/512px/0385/3928385.jpg: image file is truncated (40 bytes not processed)
+/mnt/data/danbooru2021/512px/0604/4034604.jpg: image file is truncated (65 bytes not processed)

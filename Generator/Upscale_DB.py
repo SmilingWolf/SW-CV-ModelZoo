@@ -38,7 +38,7 @@ class DataGenerator:
         self.n_channels = n_channels
 
     def getLabels(self, filename):
-        db = sqlite3.connect(r"F:\MLArchives\danbooru2020\danbooru2020.db")
+        db = sqlite3.connect(r"F:\MLArchives\danbooru2021\danbooru2021.db")
         db_cursor = db.cursor()
 
         img_id = int(
@@ -55,7 +55,7 @@ class DataGenerator:
         return encoded
 
     def getImage(self, filename):
-        img_fullpath = r"F:\MLArchives\danbooru2020\512px\%s" % filename.numpy().decode(
+        img_fullpath = r"F:\MLArchives\danbooru2021\512px\%s" % filename.numpy().decode(
             "utf-8"
         )
         img = cv2.imread(img_fullpath, cv2.IMREAD_COLOR)
@@ -78,7 +78,7 @@ class DataGenerator:
                 img = rotate(img, angle)
 
         img = cv2.resize(img, (self.dim[0], self.dim[1]), interpolation=cv2.INTER_AREA)
-        img = img * np.array(1 / 255.0).astype(np.float32)
+        img = img.astype(np.float32)
         return img
 
     def wrap_func(self, filename):

@@ -4,7 +4,7 @@ import numpy as np
 import onnxruntime as rt
 
 dim = 320
-model = rt.InferenceSession("networks/NFNetL1V1-100-0.57141.onnx")
+model = rt.InferenceSession("networks/NFNetL1V1_01_29_2022_08h20m44s.onnx")
 
 img = np.random.rand(1, dim, dim, 3).astype(np.float32)
 
