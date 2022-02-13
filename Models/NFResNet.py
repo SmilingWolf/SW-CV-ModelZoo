@@ -73,13 +73,9 @@ def NFBlock(
     )
 
     if cnn_attention == "se":
-        out = (
-            2 * CNNAttention.se_block(out, filters * 4) * out
-        )  # Multiply by 2 for rescaling
+        out = 2 * CNNAttention.SEBlock(filters * 4)(out)  # Multiply by 2 for rescaling
     elif cnn_attention == "eca":
-        out = (
-            2 * CNNAttention.eca_block(out, filters * 4) * out
-        )  # Multiply by 2 for rescaling
+        out = 2 * CNNAttention.ECABlock(filters * 4)(out)  # Multiply by 2 for rescaling
 
     if stochdepth_rate > 0.0:
         out = Base.StochDepth(drop_rate=stochdepth_rate)(out)

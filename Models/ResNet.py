@@ -71,9 +71,9 @@ def ResBlock(
     )
 
     if cnn_attention == "se":
-        out = CNNAttention.se_block(out, filters * 4) * out
+        out = CNNAttention.SEBlock(filters * 4)(out)
     elif cnn_attention == "eca":
-        out = CNNAttention.eca_block(out, filters * 4) * out
+        out = CNNAttention.ECABlock(filters * 4)(out)
 
     if stochdepth_rate > 0.0:
         out = Base.StochDepth(drop_rate=stochdepth_rate, scale_by_keep=True)(out)
