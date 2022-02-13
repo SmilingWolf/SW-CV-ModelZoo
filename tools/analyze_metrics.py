@@ -1,6 +1,7 @@
+import argparse
+
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def filter_old_new(img_tags, img_probs, is_new=False):
@@ -30,75 +31,83 @@ def filter_old_new(img_tags, img_probs, is_new=False):
     return img_tags, img_probs
 
 
-def find_factor(img_tags, img_probs, start=0.3, end=0.9, points=6001):
-    prec = []
-    rec = []
-    f1s = []
-    f2s = []
-    clip_points = []
-    first_time = False
+def calc_metrics(img_tags, img_probs, thresh):
     yz = (img_tags > 0).astype(np.uint)
-    for x in np.linspace(start, end, points):
-        pos = (img_probs > x).astype(np.uint)
-        pct = pos + 2 * yz
+    pos = (img_probs > thresh).astype(np.uint)
+    pct = pos + 2 * yz
 
-        TN = np.sum(pct == 0).astype(np.float32)
-        FP = np.sum(pct == 1).astype(np.float32)
-        FN = np.sum(pct == 2).astype(np.float32)
-        TP = np.sum(pct == 3).astype(np.float32)
+    TN = np.sum(pct == 0).astype(np.float32)
+    FP = np.sum(pct == 1).astype(np.float32)
+    FN = np.sum(pct == 2).astype(np.float32)
+    TP = np.sum(pct == 3).astype(np.float32)
 
-        recall = TP / (TP + FN)
-        precision = TP / (TP + FP)
-        accuracy = (TP + TN) / (TP + TN + FP + FN)
-
-        if precision >= recall and first_time == False:
-            factor = round(x, 4)
-            break
-            print(x)
-            first_time = True
-
-        F1 = 2 * (precision * recall) / (precision + recall)
-        F2 = 5 * (precision * recall) / ((4 * precision) + recall)
-
-        clip_points.append(x)
-        prec.append(precision)
-        rec.append(recall)
-        f1s.append(F1)
-        f2s.append(F2)
-
-    # plt.figure(figsize=(1920 / 96, 1080 / 96), dpi=96)
-    # plt.plot(clip_points, prec, label="precision")
-    # plt.plot(clip_points, rec, label="recall")
-    # plt.plot(clip_points, f1s, label="F1")
-    # plt.plot(clip_points, f2s, label="F2")
-    # plt.legend()
-    # plt.show()
-    return factor
+    recall = TP / (TP + FN)
+    precision = TP / (TP + FP)
+    return precision, recall
 
 
-img_probs = np.load("tags_probs_NFNetL1V1_01_29_2022_08h20m44s.npy")
+parser = argparse.ArgumentParser(description="Analyze output probabilities dumps")
+parser.add_argument(
+    "-d",
+    "--dump",
+    default="data/tags_probs_NFNetL2V1_01_29_2022_08h08m56s.npy",
+    help="Numpy dump to use",
+)
+
+parser.add_argument(
+    "-b",
+    "--bottom-index",
+    type=int,
+    default=0,
+    help="Slice files along axis=1 starting from this index",
+)
+
+thresh_group = parser.add_mutually_exclusive_group()
+thresh_group.add_argument(
+    "-a",
+    "--analyze",
+    action="store_true",
+    help="Iteratively look for the threshold where P ≈ R",
+)
+thresh_group.set_defaults(analyze=False)
+
+thresh_group.add_argument(
+    "-t",
+    "--threshold",
+    type=float,
+    default=0.4,
+    help="Use this threshold to calculate the metrics",
+)
+args = parser.parse_args()
+
+img_probs = np.load(args.dump)
 img_tags = np.load("2021_0000_0899/encoded_tags_test.npy")
 
 # img_tags, img_probs = filter_old_new(img_tags, img_probs, True)
 
-"""
-factor_end = 0.9
-factor_start = 0.3
-points = factor_end * 100 - factor_start * 100 + 1
-factor = find_factor(img_tags, img_probs, factor_start, factor_end, int(points))
-factor_start_step = factor * 100 - 1
-factor_start = factor_start_step / 100
-points = factor_end * 1000 - factor_start * 1000 + 1
-factor = find_factor(img_tags, img_probs, factor_start, factor_end, int(points))
-factor_start_step = factor * 1000 - 1
-factor_start = factor_start_step / 1000
-points = factor_end * 10000 - factor_start * 10000 + 1
-factor = find_factor(img_tags, img_probs, factor_start, factor_end, int(points))
-"""
+if args.bottom_index > 0:
+    img_probs = img_probs[:, args.bottom_index :]
+    img_tags = img_tags[:, args.bottom_index :]
 
-factor_L1V1_100L = 0.3228
-factor = factor_L1V1_100L
-pos = (img_probs > factor).astype(np.uint)
+if args.analyze:
+    threshold_min = 0.1
+    threshold_max = 0.95
+
+    recall = 0.0
+    precision = 1.0
+    while round(recall, 4) != round(precision, 4):
+        threshold = (threshold_max + threshold_min) / 2
+        recall, precision = calc_metrics(img_tags, img_probs, threshold)
+        if recall > precision:
+            threshold_max = threshold
+        else:
+            threshold_min = threshold
+
+    threshold = round(threshold, 4)
+else:
+    threshold = args.threshold
+
+pos = (img_probs > threshold).astype(np.uint)
 yz = (img_tags > 0).astype(np.uint)
 pct = pos + 2 * yz
 
@@ -117,7 +126,7 @@ F2 = 5 * (precision * recall) / ((4 * precision) + recall)
 MCC = ((TP * TN) - (FP * FN)) / np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
 
 d = {
-    "thres": factor,
+    "thres": threshold,
     "F1": round(F1, 4),
     "F2": round(F2, 4),
     "MCC": round(MCC, 4),
