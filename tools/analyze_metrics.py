@@ -97,8 +97,8 @@ if args.analyze:
     precision = 1.0
     while round(recall, 4) != round(precision, 4):
         threshold = (threshold_max + threshold_min) / 2
-        recall, precision = calc_metrics(img_tags, img_probs, threshold)
-        if recall > precision:
+        precision, recall = calc_metrics(img_tags, img_probs, threshold)
+        if precision > recall:
             threshold_max = threshold
         else:
             threshold_min = threshold
