@@ -87,6 +87,7 @@ if __name__ == "__main__":
     date_time = now.strftime("%m_%d_%Y_%Hh%Mm%Ss")
 
     node_name = "vm_name_here"
+    bucket_root = "gs://sw_tpu_training"
 
     # Input
     image_size = 320
@@ -140,7 +141,7 @@ if __name__ == "__main__":
     )
 
     training_generator = DataGenerator(
-        "gs://sw_tpu_training/%s/record_shards_train/*" % node_name,
+        "%s/%s/record_shards_train/*" % (bucket_root, node_name),
         total_labels=total_labels,
         image_size=image_size,
         batch_size=global_batch_size,
@@ -151,7 +152,7 @@ if __name__ == "__main__":
     training_dataset = training_generator.genDS()
 
     validation_generator = DataGenerator(
-        "gs://sw_tpu_training/%s/record_shards_val/*" % node_name,
+        "%s/%s/record_shards_val/*" % (bucket_root, node_name),
         total_labels=total_labels,
         image_size=image_size,
         batch_size=global_batch_size,
@@ -179,7 +180,7 @@ if __name__ == "__main__":
 
     sched = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=True)
     rmc_loss = tf.keras.callbacks.ModelCheckpoint(
-        "gs://sw_tpu_training/checkpoints/NFNet%sV1_%s" % (definition_name, date_time),
+        "%s/checkpoints/NFNet%sV1_%s" % (bucket_root, definition_name, date_time),
         save_best_only=True,
         save_freq="epoch",
         save_weights_only=True,
