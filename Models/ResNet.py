@@ -97,6 +97,7 @@ def ResNetV1(
     out_classes=2000,
     definition_name="50",
     cnn_attention=None,
+    input_scaling="inception",
 ):
     stochdepth_rate = 0.1
     definition = definitions[definition_name]
@@ -104,10 +105,11 @@ def ResNetV1(
     num_blocks = sum(definition["blocks"])
 
     img_input = tf.keras.layers.Input(shape=in_shape)
+    x = Base.input_scaling(method=input_scaling)(img_input)
 
     # Root block / "stem"
     x = ConvLayers.PadConv2D(
-        img_input,
+        x,
         filters=64,
         kernel_size=7,
         strides=2,
