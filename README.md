@@ -15,9 +15,19 @@ Anonymous, The Danbooru Community, & Gwern Branwen; “Danbooru2021: A Large-Sca
 ----
 
 ## Journal
-06/02/2022: great news crew! TRC allowed me to use a bunch of TPUs!
+**18/02/2022**:  
+So far I'm incredibly pleased with the results of adding ECA to Lx+SiLU networks.  
+At the meager cost of ~120 more parameters (give or take, depending on network depth) it is extremely effective at increasing network capacity.
 
-To make better use of this amount of compute I had to overhaul a number of components, so a bunch of things are likely to have fallen to bitrot in the process.
+On the other hand, I seem to have hit a wall with {L2,L1}+SiLU+ECA.  
+They overfit by epoch ~70 and ~85 out of 100, respectively.  
+I tried increasing MixUp to 0.3. This slowed down overfitting, but even then, by the end of training, the checkpoints with the best validation loss didn't display improved metrics over their MixUp 0.2 counterparts.  
+Something that DID work was finetuning while increasing the image size from 320 to 384. I also tried a handful of learning rate schedules. In the end the one that worked best was starting off with max_learning_rate (0.1), no warmup, and letting cosine annealing do its thing over the course of 10 epochs.
+
+**06/02/2022**:
+Great news crew! TRC allowed me to use a bunch of TPUs!
+
+To make better use of this amount of compute I had to overhaul a number of components, so a bunch of things are likely to have fallen to bitrot in the process.  
 I can only guarantee NFNet can work pretty much as before with the right arguments.  
 NFResNet changes *should* have left it retrocompatible with the previous version.  
 ResNet has been streamlined to be mostly in line with the Bag-of-Tricks paper ([arXiv:1812.01187](https://arxiv.org/abs/1812.01187)) with the exception of the stem. It is not compatible with the previous version of the code.
