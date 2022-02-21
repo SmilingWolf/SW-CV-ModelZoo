@@ -66,9 +66,9 @@ def ResBlock(
         conv_type="gen_conv",
         name=Base.format_name(prefix, "conv2d_03"),
     )
-    out = tf.keras.layers.BatchNormalization(name=Base.format_name(prefix, "bn_03"))(
-        out
-    )
+    out = tf.keras.layers.BatchNormalization(
+        gamma_initializer="zeros", name=Base.format_name(prefix, "bn_03")
+    )(out)
 
     if cnn_attention == "se":
         out = CNNAttention.SEBlock(filters * 4)(out)
@@ -77,8 +77,6 @@ def ResBlock(
 
     if stochdepth_rate > 0.0:
         out = Base.StochDepth(drop_rate=stochdepth_rate, scale_by_keep=True)(out)
-
-    out = Base.SkipInit()(out)
 
     out = tf.keras.layers.Add()([out, shortcut])
     out = tf.keras.layers.ReLU(name=Base.format_name(prefix, "relu_03"))(out)
