@@ -170,6 +170,7 @@ class DataGenerator:
         dataset = dataset.map(
             self.parse_single_record, num_parallel_calls=tf.data.AUTOTUNE
         )
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
         if self.noise_level >= 1:
             dataset = dataset.map(self.random_flip, num_parallel_calls=tf.data.AUTOTUNE)
