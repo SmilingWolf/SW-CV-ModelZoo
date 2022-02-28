@@ -40,20 +40,21 @@ if __name__ == "__main__":
     now = datetime.now()
     date_time = now.strftime("%m_%d_%Y_%Hh%Mm%Ss")
 
+    multiplier = 1
     node_name = "vm_name_here"
     bucket_root = "gs://sw_tpu_training"
 
     # Input
     image_size = 320
     total_labels = 2380
-    global_batch_size = 32 * strategy.num_replicas_in_sync
+    global_batch_size = 32 * multiplier * strategy.num_replicas_in_sync
 
     # Training schedule
     warmup_epochs = 5
     total_epochs = 100
 
     # Learning rate
-    max_learning_rate = 0.02
+    max_learning_rate = 0.02 * multiplier
     warmup_learning_rate = max_learning_rate * 0.1
     final_learning_rate = max_learning_rate * 0.01
 
@@ -142,8 +143,8 @@ if __name__ == "__main__":
         validation_data=validation_dataset,
         initial_epoch=0,
         epochs=total_epochs,
-        steps_per_epoch=10996,
-        validation_steps=364,
+        steps_per_epoch=10996 // multiplier,
+        validation_steps=364 // multiplier,
         callbacks=cb_list,
     )
 

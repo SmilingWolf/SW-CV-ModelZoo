@@ -9,8 +9,7 @@ from tensorflow_addons.metrics import F1Score
 from wandb.keras import WandbCallback
 
 from Generator.ParseTFRecord import DataGenerator
-from Models.NFNet import NFNetV1
-from Utils import agc
+from Models.ResNet import ResNetV1
 
 
 def scheduler(epoch, lr):
@@ -29,51 +28,6 @@ def scheduler(epoch, lr):
         alpha = final_learning_rate / max_learning_rate
         decayed = (1 - alpha) * cosine_decay + alpha
         return max_learning_rate * decayed
-
-
-class AGCModel(tf.keras.Model):
-    def __init__(self, inner_model, clip_factor=0.01, eps=1e-3):
-        super().__init__()
-        self.inner_model = inner_model
-        self.clip_factor = clip_factor
-        self.eps = eps
-
-    @tf.function
-    def train_step(self, data):
-        images, labels = data
-
-        with tf.GradientTape() as tape:
-            predictions = self.inner_model(images, training=True)
-            loss = tf.nn.compute_average_loss(
-                self.compiled_loss(labels, predictions),
-                global_batch_size=global_batch_size,
-            )
-        trainable_params = self.inner_model.trainable_weights
-        gradients = tape.gradient(loss, trainable_params)
-        agc_gradients = agc.adaptive_clip_grad(
-            trainable_params, gradients, clip_factor=self.clip_factor, eps=self.eps
-        )
-        self.optimizer.apply_gradients(zip(agc_gradients, trainable_params))
-
-        self.compiled_metrics.update_state(labels, predictions)
-        return {m.name: m.result() for m in self.metrics}
-
-    @tf.function
-    def test_step(self, data):
-        images, labels = data
-
-        predictions = self.inner_model(images, training=False)
-        loss = tf.nn.compute_average_loss(
-            self.compiled_loss(labels, predictions), global_batch_size=global_batch_size
-        )
-        self.compiled_metrics.update_state(labels, predictions)
-        return {m.name: m.result() for m in self.metrics}
-
-    def save_weights(self, filepath, *args, **kwargs):
-        self.inner_model.save(filepath=filepath)
-
-    def call(self, inputs, *args, **kwargs):
-        return self.inner_model(inputs, *args, **kwargs)
 
 
 if __name__ == "__main__":
@@ -100,15 +54,14 @@ if __name__ == "__main__":
     total_epochs = 100
 
     # Learning rate
-    max_learning_rate = 0.1 * multiplier
+    max_learning_rate = 0.02 * multiplier
     warmup_learning_rate = max_learning_rate * 0.1
     final_learning_rate = max_learning_rate * 0.01
-    agc_clip_factor = 0.01
 
     # Model definition
-    definition_name = "L1"
-    cnn_attention = "eca"
-    activation = "silu"
+    definition_name = "50"
+    cnn_attention = None
+    activation = "relu"
 
     # Augmentations
     noise_level = 2
@@ -124,7 +77,6 @@ if __name__ == "__main__":
         "max_learning_rate": max_learning_rate,
         "warmup_learning_rate": warmup_learning_rate,
         "final_learning_rate": final_learning_rate,
-        "agc_clip_factor": agc_clip_factor,
         "definition_name": definition_name,
         "cnn_attention": cnn_attention,
         "activation": activation,
@@ -137,7 +89,7 @@ if __name__ == "__main__":
         project="tpu-tracking",
         entity="smilingwolf",
         config=train_config,
-        name="NFNet%sV1_%s" % (definition_name, date_time),
+        name="ResNet%sV1_%s" % (definition_name, date_time),
         tags=[node_name],
     )
 
@@ -164,24 +116,22 @@ if __name__ == "__main__":
     validation_dataset = validation_generator.genDS()
 
     with strategy.scope():
-        model = NFNetV1(
+        model = ResNetV1(
             in_shape=(image_size, image_size, 3),
             out_classes=total_labels,
             definition_name=definition_name,
             cnn_attention=cnn_attention,
-            compensate_avgpool_var=True,
-            activation=activation,
+            input_scaling="inception",
         )
-        model = AGCModel(model, clip_factor=agc_clip_factor)
 
         f1 = F1Score(total_labels, "micro", 0.4)
-        loss = SigmoidFocalCrossEntropy(reduction=tf.keras.losses.Reduction.NONE)
+        loss = SigmoidFocalCrossEntropy(reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE)
         opt = SGD(learning_rate=warmup_learning_rate, momentum=0.9, nesterov=True)
         model.compile(optimizer=opt, loss=loss, metrics=[f1])
 
     sched = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=True)
     rmc_loss = tf.keras.callbacks.ModelCheckpoint(
-        "%s/checkpoints/NFNet%sV1_%s" % (bucket_root, definition_name, date_time),
+        "%s/checkpoints/ResNet%sV1_%s/variables/variables" % (bucket_root, definition_name, date_time),
         save_best_only=True,
         save_freq="epoch",
         save_weights_only=True,
