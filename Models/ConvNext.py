@@ -13,6 +13,7 @@ def ResBlock(
 ):
     out = x
 
+    out = tf.keras.layers.ZeroPadding2D(padding=(3, 3))(out)
     out = tf.keras.layers.DepthwiseConv2D(
         kernel_size=7,
         padding="same",
@@ -67,8 +68,8 @@ def ConvNextV1(
     definition_name="S",
     cnn_attention=None,
     input_scaling="inception",
+    stochdepth_rate=0.1,
 ):
-    stochdepth_rate = 0.1
     definition = definitions[definition_name]
 
     num_blocks = sum(definition["blocks"])
@@ -91,9 +92,7 @@ def ConvNextV1(
     full_index = 0
     for stage_depth, block_width in zip(definition["blocks"], definition["filters"]):
         if index > 0:
-            x = tf.keras.layers.LayerNormalization(name="block%d_down_norm" % index)(
-                x
-            )
+            x = tf.keras.layers.LayerNormalization(name="block%d_down_norm" % index)(x)
             x = tf.keras.layers.Conv2D(
                 filters=block_width,
                 kernel_size=2,

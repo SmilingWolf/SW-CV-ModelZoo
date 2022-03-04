@@ -62,6 +62,7 @@ if __name__ == "__main__":
     definition_name = "T"
     cnn_attention = None
     activation = "gelu"
+    stochdepth_rate = 0.1
 
     # Augmentations
     noise_level = 2
@@ -80,6 +81,7 @@ if __name__ == "__main__":
         "definition_name": definition_name,
         "cnn_attention": cnn_attention,
         "activation": activation,
+        "stochdepth_rate": stochdepth_rate,
         "noise_level": noise_level,
         "mixup_alpha": mixup_alpha,
         "random_resize_method": random_resize_method,
@@ -122,16 +124,20 @@ if __name__ == "__main__":
             definition_name=definition_name,
             cnn_attention=cnn_attention,
             input_scaling="inception",
+            stochdepth_rate=stochdepth_rate,
         )
 
         f1 = F1Score(total_labels, "micro", 0.4)
-        loss = SigmoidFocalCrossEntropy(reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE)
+        loss = SigmoidFocalCrossEntropy(
+            reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
+        )
         opt = SGD(learning_rate=warmup_learning_rate, momentum=0.9, nesterov=True)
         model.compile(optimizer=opt, loss=loss, metrics=[f1])
 
     sched = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=True)
     rmc_loss = tf.keras.callbacks.ModelCheckpoint(
-        "%s/checkpoints/ConvNext%sV1_%s/variables/variables" % (bucket_root, definition_name, date_time),
+        "%s/checkpoints/ConvNext%sV1_%s/variables/variables"
+        % (bucket_root, definition_name, date_time),
         save_best_only=True,
         save_freq="epoch",
         save_weights_only=True,
