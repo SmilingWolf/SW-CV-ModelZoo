@@ -54,7 +54,7 @@ if __name__ == "__main__":
     total_epochs = 100
 
     # Learning rate
-    max_learning_rate = 0.02 * multiplier
+    max_learning_rate = 0.01 * multiplier
     warmup_learning_rate = max_learning_rate * 0.1
     final_learning_rate = max_learning_rate * 0.01
 
