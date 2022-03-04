@@ -15,6 +15,24 @@ Anonymous, The Danbooru Community, & Gwern Branwen; “Danbooru2021: A Large-Sca
 ----
 
 ## Journal
+**04/03/2022**:  
+It is done! As the commit says, the first round of experiments on NFNets is finally over.
+
+W&B reports this whole thing took about 112 days of compute time for the main runs, plus 11 days for experiments on higher image resolutions, and likely some more days on top accounting for failed experiments.  
+All of the experiments were run on a fleet of TPUv2 and TPUv3 VMs offered for free by the TRC program. Thanks!
+
+Few takeaways, going over the data:
+- HSwish is a decent replacement for SiLU. In fact, based on the [b1092 datasheet](https://github.com/SmilingWolf/SW-CV-ModelZoo/blob/ffe897ae9946b474fb811c7378cce132d3a6833e/results/db2021_0000_0899_0950_0999_b0000.csv), which focuses on performance on minority classes, it can provide about 1% better metrics wrt. ReLU;
+- contrary to [arXiv:2102.06171](https://arxiv.org/abs/2102.06171) I find SiLU to consistently and considerably boost network performance wrt. their ReLU counterparts. The most extreme example is how I haven't managed, despite a few different tries w/ smaller learning rates, to train a L0 ReLU network with MixUp = 0.3 without it becoming unstable and ultimately collapsing, while the HSwish and SiLU variants trained without an itch;
+- increasing MixUp gives somewhat mixed results, I'm not too sure it is the path forward for better validation results on this dataset with those networks. I'd sooner explore different dropout/stochastic depth parameters.
+
+Now a word about the validation dataset:  
+- it has not been checked for duplicates against the training data
+- images from danbooru2018 and back used black padding and alpha background, while images from danbooru2019+ use white. I think, with no proof outside of a few small tests, this may be skewing some classes to look for a black background or borders instead of paying attention to the actual details.
+
+This means the validation metrics are likely overoptimistic.  
+The first, obvious step would be to take the original images modulo 0900-0949, which I have reserved for this exact scenario, remove duplicates and "plausibly similar" images (say, maybe using embeddings or a very low threshold with a perceptual hash), preprocess them in a more uniform way, and use the output as a final test dataset.
+
 **18/02/2022**:  
 So far I'm incredibly pleased with the results of adding ECA to Lx+SiLU networks.  
 At the meager cost of ~120 more parameters (give or take, depending on network depth) it is extremely effective at increasing network capacity.
