@@ -16,7 +16,7 @@ def ResBlock(
     out = tf.keras.layers.ZeroPadding2D(padding=(3, 3))(out)
     out = tf.keras.layers.DepthwiseConv2D(
         kernel_size=7,
-        padding="same",
+        padding="valid",
         name=Base.format_name(prefix, "conv2d_01"),
     )(out)
     out = tf.keras.layers.LayerNormalization(name=Base.format_name(prefix, "norm_01"))(
