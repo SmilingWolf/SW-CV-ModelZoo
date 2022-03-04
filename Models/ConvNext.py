@@ -48,7 +48,7 @@ def ResBlock(
     if stochdepth_rate > 0.0:
         out = Base.StochDepth(drop_rate=stochdepth_rate, scale_by_keep=True)(out)
 
-    out = Base.SkipInit()(out)
+    out = Base.SkipInitChannelwise(filters)(out)
 
     out = tf.keras.layers.Add()([out, x])
     return out
