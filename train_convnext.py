@@ -3,9 +3,9 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 import wandb
-from tensorflow.keras.optimizers import SGD
 from tensorflow_addons.losses import SigmoidFocalCrossEntropy
 from tensorflow_addons.metrics import F1Score
+from tensorflow_addons.optimizers import LAMB
 from wandb.keras import WandbCallback
 
 from Generator.ParseTFRecord import DataGenerator
@@ -50,11 +50,11 @@ if __name__ == "__main__":
     global_batch_size = 32 * multiplier * strategy.num_replicas_in_sync
 
     # Training schedule
-    warmup_epochs = 5
+    warmup_epochs = 0
     total_epochs = 100
 
     # Learning rate
-    max_learning_rate = 0.01 * multiplier
+    max_learning_rate = 0.0005 * multiplier
     warmup_learning_rate = max_learning_rate * 0.1
     final_learning_rate = max_learning_rate * 0.01
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         loss = SigmoidFocalCrossEntropy(
             reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
         )
-        opt = SGD(learning_rate=warmup_learning_rate, momentum=0.9, nesterov=True)
+        opt = LAMB(learning_rate=warmup_learning_rate)
         model.compile(optimizer=opt, loss=loss, metrics=[f1])
 
     sched = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=True)
