@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     # Augmentations
     noise_level = 2
-    mixup_alpha = 0.2
+    mixup_alpha = 0.8
     random_resize_method = True
 
     train_config = {
@@ -128,12 +128,14 @@ if __name__ == "__main__":
         )
 
         f1 = F1Score(total_labels, "micro", 0.4)
+        rec_at_p65 = tf.keras.metrics.RecallAtPrecision(0.65, num_thresholds=1024)
         loss = SigmoidFocalCrossEntropy(
             reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
         )
         opt = LAMB(learning_rate=warmup_learning_rate)
-        model.compile(optimizer=opt, loss=loss, metrics=[f1])
+        model.compile(optimizer=opt, loss=loss, metrics=[f1, rec_at_p65])
 
+    t800 = tf.keras.callbacks.TerminateOnNaN()
     sched = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=True)
     rmc_loss = tf.keras.callbacks.ModelCheckpoint(
         "%s/checkpoints/ConvNext%sV1_%s/variables/variables"
@@ -142,7 +144,7 @@ if __name__ == "__main__":
         save_freq="epoch",
         save_weights_only=True,
     )
-    cb_list = [rmc_loss, sched, WandbCallback(save_model=False)]
+    cb_list = [t800, rmc_loss, sched, WandbCallback(save_model=False)]
 
     history = model.fit(
         training_dataset,
