@@ -70,14 +70,15 @@ class SkipInit(tf.keras.layers.Layer):
 
 
 class SkipInitChannelwise(tf.keras.layers.Layer):
-    def __init__(self, channels, **kwargs):
+    def __init__(self, channels, init_val=1e-6, **kwargs):
         super().__init__(**kwargs)
         self.skip = self.add_weight(
             name="skip",
             shape=(channels,),
-            initializer="zeros",
+            initializer="ones",
             trainable=True,
         )
+        self.skip.assign(tf.ones(channels) * init_val)
 
     def call(self, x):
         return x * self.skip

@@ -118,7 +118,7 @@ def ConvNextV1(
     x = tf.keras.layers.GlobalAveragePooling2D(name="predictions_globalavgpooling")(x)
     x = tf.keras.layers.LayerNormalization(name="predictions_norm")(x)
 
-    dense_init = tf.keras.initializers.RandomNormal(mean=0.0, stddev=0.01)
+    dense_init = tf.keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02)
     x = tf.keras.layers.Dense(
         out_classes, kernel_initializer=dense_init, name="predictions_dense"
     )(x)
