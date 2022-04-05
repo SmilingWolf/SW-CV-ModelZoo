@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from cleanlab.pruning import get_noise_indices
+from cleanlab.filter import find_label_issues
 from tqdm import tqdm
 
 if __name__ == "__main__":
@@ -31,10 +31,10 @@ if __name__ == "__main__":
         recip = recip - psx
         psx = np.stack([recip, psx], axis=1)
 
-        ordered_label_errors = get_noise_indices(
-            s=train_labels_with_errors,
-            psx=psx,
-            sorted_index_method="normalized_margin",
+        ordered_label_errors = find_label_issues(
+            labels=train_labels_with_errors,
+            pred_probs=psx,
+            return_indices_ranked_by="self_confidence",
             n_jobs=1,
         )
 
