@@ -18,6 +18,7 @@ class DataGenerator:
         batch_size=32,
         noise_level=0,
         mixup_alpha=0.2,
+        cutout_max_pct=0.25,
         random_resize_method=True,
     ):
         """
@@ -35,6 +36,9 @@ class DataGenerator:
         self.noise_level = noise_level
         self.mixup_alpha = mixup_alpha
         self.random_resize_method = random_resize_method
+
+        self.cutout_max_pct = cutout_max_pct
+        self.cutout_replace = 255
 
     def parse_single_record(self, example_proto):
         feature_description = {
@@ -133,6 +137,64 @@ class DataGenerator:
         image = tf.cast(tf.clip_by_value(image, 0, 255), tf.uint8)
         return image, labels
 
+    # https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/autoaugment.py
+    def cutout(self, image, labels):
+        """Apply cutout (https://arxiv.org/abs/1708.04552) to image.
+        This operation applies a (2*pad_size x 2*pad_size) mask of zeros to
+        a random location within `img`. The pixel values filled in will be of the
+        value `replace`. The located where the mask will be applied is randomly
+        chosen uniformly over the whole image.
+        Args:
+          image: An image Tensor of type uint8.
+          pad_size: Specifies how big the zero mask that will be generated is that
+            is applied to the image. The mask will be of size
+            (2*pad_size x 2*pad_size).
+          replace: What pixel value to fill in the image in the area that has
+            the cutout mask applied to it.
+        Returns:
+          An image Tensor that is of type uint8.
+        """
+        max_pct = self.cutout_max_pct
+        replace = self.cutout_replace
+
+        image_height = tf.shape(image)[0]
+        image_width = tf.shape(image)[1]
+
+        pad_pct = tf.random.uniform((), minval=0, maxval=max_pct)
+        max_pad = tf.math.maximum(image_height, image_width)
+        pad_size = tf.cast(
+            tf.cast(max_pad, dtype=tf.float32) * pad_pct, dtype=max_pad.dtype
+        )
+
+        # Sample the center location in the image where the zero mask will be applied.
+        cutout_center_height = tf.random.uniform(
+            shape=[], minval=0, maxval=image_height, dtype=tf.int32
+        )
+
+        cutout_center_width = tf.random.uniform(
+            shape=[], minval=0, maxval=image_width, dtype=tf.int32
+        )
+
+        lower_pad = tf.maximum(0, cutout_center_height - pad_size)
+        upper_pad = tf.maximum(0, image_height - cutout_center_height - pad_size)
+        left_pad = tf.maximum(0, cutout_center_width - pad_size)
+        right_pad = tf.maximum(0, image_width - cutout_center_width - pad_size)
+
+        cutout_shape = [
+            image_height - (lower_pad + upper_pad),
+            image_width - (left_pad + right_pad),
+        ]
+        padding_dims = [[lower_pad, upper_pad], [left_pad, right_pad]]
+        mask = tf.pad(
+            tf.zeros(cutout_shape, dtype=image.dtype), padding_dims, constant_values=1
+        )
+        mask = tf.expand_dims(mask, -1)
+        mask = tf.tile(mask, [1, 1, 3])
+        image = tf.where(
+            tf.equal(mask, 0), tf.ones_like(image, dtype=image.dtype) * replace, image
+        )
+        return image, labels
+
     def mixup_single(self, images, labels):
         alpha = self.mixup_alpha
 
@@ -179,6 +241,9 @@ class DataGenerator:
         # Resize before batching. Especially important if random_crop is enabled
         dataset = dataset.map(self.resize, num_parallel_calls=tf.data.AUTOTUNE)
 
+        if self.noise_level >= 2 and self.cutout_max_pct > 0.0:
+            dataset = dataset.map(self.cutout, num_parallel_calls=tf.data.AUTOTUNE)
+
         dataset = dataset.batch(self.batch_size, drop_remainder=True)
 
         # Rotation is very slow on CPU. Rotating a batch of resized images is much faster
@@ -187,7 +252,7 @@ class DataGenerator:
                 self.random_rotate, num_parallel_calls=tf.data.AUTOTUNE
             )
 
-        if self.noise_level >= 2:
+        if self.noise_level >= 2 and self.mixup_alpha > 0.0:
             dataset = dataset.map(
                 self.mixup_single, num_parallel_calls=tf.data.AUTOTUNE
             )

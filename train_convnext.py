@@ -67,13 +67,14 @@ if __name__ == "__main__":
     # Augmentations
     noise_level = 2
     mixup_alpha = 0.8
+    cutout_max_pct = 0.0
     random_resize_method = True
 
     # Loss
     loss_name = "asl"
     asl_gamma_neg = 0
     asl_gamma_pos = 0
-    asl_clip = 0.00
+    asl_clip = 0.0
 
     train_config = {
         "image_size": image_size,
@@ -90,6 +91,7 @@ if __name__ == "__main__":
         "stochdepth_rate": stochdepth_rate,
         "noise_level": noise_level,
         "mixup_alpha": mixup_alpha,
+        "cutout_max_pct": cutout_max_pct,
         "random_resize_method": random_resize_method,
         "loss_name": loss_name,
         "asl_gamma_neg": asl_gamma_neg,
@@ -112,6 +114,7 @@ if __name__ == "__main__":
         batch_size=global_batch_size,
         noise_level=noise_level,
         mixup_alpha=mixup_alpha,
+        cutout_max_pct=cutout_max_pct,
         random_resize_method=random_resize_method,
     )
     training_dataset = training_generator.genDS()
