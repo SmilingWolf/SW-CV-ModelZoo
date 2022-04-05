@@ -161,10 +161,9 @@ class DataGenerator:
         image_width = tf.shape(image)[1]
 
         pad_pct = tf.random.uniform((), minval=0, maxval=max_pct)
-        max_pad = tf.math.maximum(image_height, image_width)
-        pad_size = tf.cast(
-            tf.cast(max_pad, dtype=tf.float32) * pad_pct, dtype=max_pad.dtype
-        )
+        img_area = image_height * image_width
+        pad_area = tf.cast(img_area, dtype=tf.float32) * pad_pct
+        pad_size = tf.cast(tf.math.sqrt(pad_area) / 2, dtype=tf.int32)
 
         # Sample the center location in the image where the zero mask will be applied.
         cutout_center_height = tf.random.uniform(
