@@ -15,6 +15,14 @@ Anonymous, The Danbooru Community, & Gwern Branwen; “Danbooru2021: A Large-Sca
 ----
 
 ## Journal
+**05/04/2022**:  
+So, I trained a bunch of ConvNexts in the past month.  
+Learned a few things too:
+- on the importance of the learning rate: even simply halving it might lower a model's performance to the point of making it worthless.  
+While running the ASL sweep I had a few stability issues. Among other things, I tried lowering the learning rate to half the usual one. Turned out the issue was elsewhere. Fixed that, I forgot to turn the learning rate back up.  
+Lo and behold, the Focal Loss run I was using as "control group" came out a whopping 4% lower in F1 w.r.t. the old one (ConvNextTV1_03_05_2022_15h56m42s). Never making that mistake again.
+- the ASL sweep results speak for themselves: neither Focal Loss nor ASL are a good fit for either the current dataset, or the current training settings. I suspect the culprit might be the very aggressive MixUp. I'll spin up a few more test runs and report back.
+
 **04/03/2022**:  
 It is done! As the commit says, the first round of experiments on NFNets is finally over.
 
