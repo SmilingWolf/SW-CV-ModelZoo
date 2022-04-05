@@ -3,12 +3,12 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 import wandb
-from tensorflow_addons.losses import SigmoidFocalCrossEntropy
 from tensorflow_addons.metrics import F1Score
 from tensorflow_addons.optimizers import LAMB
 from wandb.keras import WandbCallback
 
 from Generator.ParseTFRecord import DataGenerator
+from Losses.ASL import AsymmetricLoss
 from Models.ConvNext import ConvNextV1
 
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     total_epochs = 100
 
     # Learning rate
-    max_learning_rate = 0.0005 * multiplier
+    max_learning_rate = 5e-4 * multiplier
     warmup_learning_rate = max_learning_rate * 0.1
     final_learning_rate = max_learning_rate * 0.01
 
@@ -68,6 +68,12 @@ if __name__ == "__main__":
     noise_level = 2
     mixup_alpha = 0.8
     random_resize_method = True
+
+    # Loss
+    loss_name = "asl"
+    asl_gamma_neg = 0
+    asl_gamma_pos = 0
+    asl_clip = 0.00
 
     train_config = {
         "image_size": image_size,
@@ -85,6 +91,10 @@ if __name__ == "__main__":
         "noise_level": noise_level,
         "mixup_alpha": mixup_alpha,
         "random_resize_method": random_resize_method,
+        "loss_name": loss_name,
+        "asl_gamma_neg": asl_gamma_neg,
+        "asl_gamma_pos": asl_gamma_pos,
+        "asl_clip": asl_clip,
     }
 
     wandb_run = wandb.init(
@@ -129,10 +139,13 @@ if __name__ == "__main__":
 
         f1 = F1Score(total_labels, "micro", 0.4)
         rec_at_p65 = tf.keras.metrics.RecallAtPrecision(0.65, num_thresholds=1024)
-        loss = SigmoidFocalCrossEntropy(
-            reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
+        loss = AsymmetricLoss(
+            reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE,
+            gamma_neg=asl_gamma_neg,
+            gamma_pos=asl_gamma_pos,
+            clip=asl_clip,
         )
-        opt = LAMB(learning_rate=warmup_learning_rate)
+        opt = LAMB(learning_rate=warmup_learning_rate, weight_decay_rate=0.05)
         model.compile(optimizer=opt, loss=loss, metrics=[f1, rec_at_p65])
 
     t800 = tf.keras.callbacks.TerminateOnNaN()
