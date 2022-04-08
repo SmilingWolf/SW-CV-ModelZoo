@@ -38,7 +38,7 @@ class DataGenerator:
         self.random_resize_method = random_resize_method
 
         self.cutout_max_pct = cutout_max_pct
-        self.cutout_replace = 255
+        self.cutout_replace = 127
 
     def parse_single_record(self, example_proto):
         feature_description = {
@@ -220,18 +220,16 @@ class DataGenerator:
 
     def genDS(self):
         files = tf.data.Dataset.list_files(self.records_path)
+        files = files.repeat()
+
         dataset = files.interleave(
-            tf.data.TFRecordDataset,
+            lambda x: tf.data.TFRecordDataset(x).map(
+                self.parse_single_record, num_parallel_calls=1
+            ),
             num_parallel_calls=tf.data.AUTOTUNE,
             deterministic=False,
         )
-        dataset = dataset.repeat()
         dataset = dataset.shuffle(10 * self.batch_size)
-
-        dataset = dataset.map(
-            self.parse_single_record, num_parallel_calls=tf.data.AUTOTUNE
-        )
-        dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
         if self.noise_level >= 1:
             dataset = dataset.map(self.random_flip, num_parallel_calls=tf.data.AUTOTUNE)
