@@ -230,6 +230,7 @@ class DataGenerator:
             deterministic=False,
         )
         dataset = dataset.shuffle(10 * self.batch_size)
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
         if self.noise_level >= 1:
             dataset = dataset.map(self.random_flip, num_parallel_calls=tf.data.AUTOTUNE)
