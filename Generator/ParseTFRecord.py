@@ -220,7 +220,6 @@ class DataGenerator:
 
     def genDS(self):
         files = tf.data.Dataset.list_files(self.records_path)
-        files = files.repeat()
 
         dataset = files.interleave(
             lambda x: tf.data.TFRecordDataset(x).map(
@@ -229,8 +228,8 @@ class DataGenerator:
             num_parallel_calls=tf.data.AUTOTUNE,
             deterministic=False,
         )
+        dataset = dataset.repeat()
         dataset = dataset.shuffle(10 * self.batch_size)
-        dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
         if self.noise_level >= 1:
             dataset = dataset.map(self.random_flip, num_parallel_calls=tf.data.AUTOTUNE)
@@ -243,6 +242,7 @@ class DataGenerator:
             dataset = dataset.map(self.cutout, num_parallel_calls=tf.data.AUTOTUNE)
 
         dataset = dataset.batch(self.batch_size, drop_remainder=True)
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
         # Rotation is very slow on CPU. Rotating a batch of resized images is much faster
         if self.noise_level >= 1:
@@ -255,5 +255,4 @@ class DataGenerator:
                 self.mixup_single, num_parallel_calls=tf.data.AUTOTUNE
             )
 
-        dataset = dataset.prefetch(tf.data.AUTOTUNE)
         return dataset
