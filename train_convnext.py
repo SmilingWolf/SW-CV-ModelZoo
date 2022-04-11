@@ -126,6 +126,7 @@ if __name__ == "__main__":
         batch_size=global_batch_size,
         noise_level=0,
         mixup_alpha=0.0,
+        cutout_max_pct=0.0,
         random_resize_method=False,
     )
     validation_dataset = validation_generator.genDS()

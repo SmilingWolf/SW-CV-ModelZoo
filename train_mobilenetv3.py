@@ -65,6 +65,7 @@ if __name__ == "__main__":
     # Augmentations
     noise_level = 2
     mixup_alpha = 0.2
+    cutout_max_pct = 0.0
     random_resize_method = True
 
     train_config = {
@@ -81,6 +82,7 @@ if __name__ == "__main__":
         "activation": activation,
         "noise_level": noise_level,
         "mixup_alpha": mixup_alpha,
+        "cutout_max_pct": cutout_max_pct,
         "random_resize_method": random_resize_method,
     }
 
@@ -99,6 +101,7 @@ if __name__ == "__main__":
         batch_size=global_batch_size,
         noise_level=noise_level,
         mixup_alpha=mixup_alpha,
+        cutout_max_pct=cutout_max_pct,
         random_resize_method=random_resize_method,
     )
     training_dataset = training_generator.genDS()
@@ -110,6 +113,7 @@ if __name__ == "__main__":
         batch_size=global_batch_size,
         noise_level=0,
         mixup_alpha=0.0,
+        cutout_max_pct=0.0,
         random_resize_method=False,
     )
     validation_dataset = validation_generator.genDS()
@@ -129,7 +133,7 @@ if __name__ == "__main__":
         loss = SigmoidFocalCrossEntropy(
             reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
         )
-        opt = LAMB(learning_rate=warmup_learning_rate)
+        opt = LAMB(learning_rate=warmup_learning_rate, weight_decay_rate=0.01)
         model.compile(optimizer=opt, loss=loss, metrics=[f1, rec_at_p65])
 
     t800 = tf.keras.callbacks.TerminateOnNaN()
