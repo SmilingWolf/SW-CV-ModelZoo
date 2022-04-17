@@ -96,8 +96,8 @@ def ResNetV1(
     definition_name="50",
     cnn_attention=None,
     input_scaling="inception",
+    stochdepth_rate=0.1,
 ):
-    stochdepth_rate = 0.1
     definition = definitions[definition_name]
 
     num_blocks = sum(definition["blocks"])
