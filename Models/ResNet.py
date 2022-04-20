@@ -97,6 +97,7 @@ def ResNetV1(
     cnn_attention=None,
     input_scaling="inception",
     stochdepth_rate=0.1,
+    dropout_rate=0.25,
 ):
     definition = definitions[definition_name]
 
@@ -141,7 +142,7 @@ def ResNetV1(
 
     # Classification block
     x = tf.keras.layers.GlobalAveragePooling2D(name="predictions_globalavgpooling")(x)
-    x = tf.keras.layers.Dropout(0.25)(x)
+    x = tf.keras.layers.Dropout(dropout_rate)(x)
 
     dense_init = tf.keras.initializers.RandomNormal(mean=0.0, stddev=0.01)
     x = tf.keras.layers.Dense(
