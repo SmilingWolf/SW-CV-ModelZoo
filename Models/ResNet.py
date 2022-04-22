@@ -38,6 +38,7 @@ def ResBlock(
         out,
         filters=filters,
         kernel_size=1,
+        use_bias=False,
         conv_type="gen_conv",
         name=Base.format_name(prefix, "conv2d_01"),
     )
@@ -51,6 +52,7 @@ def ResBlock(
         filters=filters,
         kernel_size=3,
         strides=strides,
+        use_bias=False,
         conv_type="gen_conv",
         name=Base.format_name(prefix, "conv2d_02"),
     )
@@ -63,6 +65,7 @@ def ResBlock(
         out,
         filters=filters * 4,
         kernel_size=1,
+        use_bias=False,
         conv_type="gen_conv",
         name=Base.format_name(prefix, "conv2d_03"),
     )
@@ -117,6 +120,8 @@ def ResNetV1(
         name="root_conv2d_01",
     )
     x = tf.keras.layers.BatchNormalization(name="root_bn_01")(x)
+    x = tf.keras.layers.ReLU(name="root_relu_01")(x)
+
     x = tf.keras.layers.ZeroPadding2D(padding=(1, 1), name="root_maxpooling2d_01_pad")(
         x
     )
