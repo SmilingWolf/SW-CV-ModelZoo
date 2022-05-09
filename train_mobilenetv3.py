@@ -56,6 +56,7 @@ if __name__ == "__main__":
     max_learning_rate = 5e-4 * multiplier
     warmup_learning_rate = max_learning_rate * 0.1
     final_learning_rate = max_learning_rate * 0.01
+    weight_decay_rate = 0.005
 
     # Model definition
     definition_name = "1.0"
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     # Augmentations
     noise_level = 2
     mixup_alpha = 0.2
-    cutout_max_pct = 0.0
+    cutout_max_pct = 0.25
     random_resize_method = True
 
     train_config = {
@@ -77,6 +78,7 @@ if __name__ == "__main__":
         "max_learning_rate": max_learning_rate,
         "warmup_learning_rate": warmup_learning_rate,
         "final_learning_rate": final_learning_rate,
+        "weight_decay_rate": weight_decay_rate,
         "definition_name": definition_name,
         "cnn_attention": cnn_attention,
         "activation": activation,
@@ -133,7 +135,9 @@ if __name__ == "__main__":
         loss = SigmoidFocalCrossEntropy(
             reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
         )
-        opt = LAMB(learning_rate=warmup_learning_rate, weight_decay_rate=0.01)
+        opt = LAMB(
+            learning_rate=warmup_learning_rate, weight_decay_rate=weight_decay_rate
+        )
         model.compile(optimizer=opt, loss=loss, metrics=[f1, rec_at_p65])
 
     t800 = tf.keras.callbacks.TerminateOnNaN()
