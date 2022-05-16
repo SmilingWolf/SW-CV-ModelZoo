@@ -31,18 +31,16 @@ def MLP(x, dim, prefix=""):
     return out
 
 
-def CaiT_LayerScale_init(curr_depth):
-    if curr_depth < 18:
+def CaiT_LayerScale_init(network_depth):
+    if network_depth <= 18:
         return 1e-1
-    elif curr_depth < 24:
+    elif network_depth <= 24:
         return 1e-5
     else:
         return 1e-6
 
 
-def ResMLP_Blocks(x, nb_patches, dim, curr_depth, prefix=""):
-    layerscale_init = CaiT_LayerScale_init(curr_depth)
-
+def ResMLP_Blocks(x, nb_patches, dim, layerscale_init, prefix=""):
     out = x
     out = Affine(channels=dim)(out)
     out = tf.keras.layers.Permute(dims=(2, 1))(out)
@@ -76,6 +74,7 @@ def ResMLP(
     dim = definition["dim"]
     depth = definition["depth"]
     patch_size = definition["patch_size"]
+    layerscale_init = CaiT_LayerScale_init(depth)
 
     nb_patches = (in_shape[0] * in_shape[1]) // (patch_size**2)
 
@@ -94,7 +93,7 @@ def ResMLP(
 
     for i in range(depth):
         prefix = f"block{i}"
-        x = ResMLP_Blocks(x, nb_patches, dim, i, prefix)
+        x = ResMLP_Blocks(x, nb_patches, dim, layerscale_init, prefix)
 
     x = Affine(dim)(x)
     x = tf.keras.layers.GlobalAveragePooling1D(name="predictions_globalavgpooling")(x)
