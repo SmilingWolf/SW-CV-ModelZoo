@@ -50,13 +50,14 @@ if __name__ == "__main__":
     global_batch_size = 32 * multiplier * strategy.num_replicas_in_sync
 
     # Training schedule
-    warmup_epochs = 0
+    warmup_epochs = 5
     total_epochs = 100
 
     # Learning rate
-    max_learning_rate = 5e-3 * multiplier
-    warmup_learning_rate = max_learning_rate * 0.1
-    final_learning_rate = max_learning_rate * 0.01
+    # LR, WD from https://github.com/facebookresearch/deit/issues/106
+    max_learning_rate = 1.25e-3 * (global_batch_size / 512)
+    warmup_learning_rate = max_learning_rate * 0.01
+    final_learning_rate = max_learning_rate * 0.001
     weight_decay_rate = 0.2
 
     # Model definition
@@ -148,7 +149,9 @@ if __name__ == "__main__":
             clip=asl_clip,
         )
         opt = LAMB(
-            learning_rate=warmup_learning_rate, weight_decay_rate=weight_decay_rate
+            learning_rate=warmup_learning_rate,
+            weight_decay_rate=weight_decay_rate,
+            exclude_from_weight_decay=["alpha", "beta", "skip"],
         )
         model.compile(optimizer=opt, loss=loss, metrics=[f1, rec_at_p65])
 
