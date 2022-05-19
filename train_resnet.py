@@ -63,7 +63,7 @@ if __name__ == "__main__":
     cnn_attention = None
     activation = "relu"
     stochdepth_rate = 0.1
-    dropout_rate = 0.25
+    dropout_rate = 0.0
 
     # Augmentations
     noise_level = 2
