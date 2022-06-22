@@ -4,11 +4,35 @@ from tensorflow.keras.models import Model
 from .layers import Base, CNNAttention
 
 
+class Affine(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def build(self, input_shape):
+        channels = input_shape[-1]
+        self.alpha = self.add_weight(
+            name="alpha",
+            shape=(channels,),
+            initializer="ones",
+            trainable=True,
+        )
+        self.beta = self.add_weight(
+            name="beta",
+            shape=(channels,),
+            initializer="zeros",
+            trainable=True,
+        )
+
+    def call(self, x):
+        return self.alpha * x + self.beta
+
+
 def ResBlock(
     x,
     filters=64,
     cnn_attention=None,
     stochdepth_rate=0.0,
+    norm_func=tf.keras.layers.LayerNormalization,
     prefix=None,
 ):
     out = x
@@ -19,9 +43,7 @@ def ResBlock(
         padding="valid",
         name=Base.format_name(prefix, "conv2d_01"),
     )(out)
-    out = tf.keras.layers.LayerNormalization(name=Base.format_name(prefix, "norm_01"))(
-        out
-    )
+    out = norm_func(name=Base.format_name(prefix, "norm_01"))(out)
 
     out = tf.keras.layers.Conv2D(
         filters=filters * 4,
@@ -69,10 +91,18 @@ def ConvNextV1(
     cnn_attention=None,
     input_scaling="inception",
     stochdepth_rate=0.1,
+    norm="layernorm",
 ):
     definition = definitions[definition_name]
 
     num_blocks = sum(definition["blocks"])
+
+    if norm == "batchnorm":
+        norm_func = tf.keras.layers.BatchNormalization
+    elif norm == "layernorm":
+        norm_func = tf.keras.layers.LayerNormalization
+    elif norm == "affine":
+        norm_func = Affine
 
     img_input = tf.keras.layers.Input(shape=in_shape)
     x = Base.input_scaling(method=input_scaling)(img_input)
@@ -86,13 +116,13 @@ def ConvNextV1(
         padding="same",
         name="root_conv2d",
     )(x)
-    x = tf.keras.layers.LayerNormalization(name="root_norm")(x)
+    x = norm_func(name="root_norm")(x)
 
     index = 0
     full_index = 0
     for stage_depth, block_width in zip(definition["blocks"], definition["filters"]):
         if index > 0:
-            x = tf.keras.layers.LayerNormalization(name="block%d_down_norm" % index)(x)
+            x = norm_func(name="block%d_down_norm" % index)(x)
             x = tf.keras.layers.Conv2D(
                 filters=block_width,
                 kernel_size=2,
@@ -109,6 +139,7 @@ def ConvNextV1(
                 block_width,
                 cnn_attention=cnn_attention,
                 stochdepth_rate=block_stochdepth_rate,
+                norm_func=norm_func,
                 prefix="block%d_cell%d" % (index, block_index),
             )
             full_index += 1
@@ -116,7 +147,7 @@ def ConvNextV1(
 
     # Classification block
     x = tf.keras.layers.GlobalAveragePooling2D(name="predictions_globalavgpooling")(x)
-    x = tf.keras.layers.LayerNormalization(name="predictions_norm")(x)
+    x = norm_func(name="predictions_norm")(x)
 
     dense_init = tf.keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02)
     x = tf.keras.layers.Dense(
