@@ -83,6 +83,12 @@ definitions = {
     "L": {"blocks": [3, 3, 27, 3], "filters": [192, 384, 768, 1536]},
 }
 
+model_norms = {
+    "batchnorm": tf.keras.layers.BatchNormalization,
+    "layernorm": tf.keras.layers.LayerNormalization,
+    "affine": Affine,
+}
+
 
 def ConvNextV1(
     in_shape=(320, 320, 3),
@@ -94,15 +100,9 @@ def ConvNextV1(
     norm="layernorm",
 ):
     definition = definitions[definition_name]
+    norm_func = model_norms[norm]
 
     num_blocks = sum(definition["blocks"])
-
-    if norm == "batchnorm":
-        norm_func = tf.keras.layers.BatchNormalization
-    elif norm == "layernorm":
-        norm_func = tf.keras.layers.LayerNormalization
-    elif norm == "affine":
-        norm_func = Affine
 
     img_input = tf.keras.layers.Input(shape=in_shape)
     x = Base.input_scaling(method=input_scaling)(img_input)

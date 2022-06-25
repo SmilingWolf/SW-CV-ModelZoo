@@ -63,6 +63,7 @@ if __name__ == "__main__":
     cnn_attention = None
     activation = "gelu"
     stochdepth_rate = 0.1
+    model_norm = "layernorm"
 
     # Augmentations
     noise_level = 2
@@ -89,6 +90,7 @@ if __name__ == "__main__":
         "cnn_attention": cnn_attention,
         "activation": activation,
         "stochdepth_rate": stochdepth_rate,
+        "model_norm": model_norm,
         "noise_level": noise_level,
         "mixup_alpha": mixup_alpha,
         "cutout_max_pct": cutout_max_pct,
@@ -139,6 +141,7 @@ if __name__ == "__main__":
             cnn_attention=cnn_attention,
             input_scaling="inception",
             stochdepth_rate=stochdepth_rate,
+            norm=model_norm,
         )
 
         f1 = F1Score(total_labels, "micro", 0.4)
