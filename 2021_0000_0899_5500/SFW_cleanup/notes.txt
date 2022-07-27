@@ -1,0 +1,7 @@
+Query:
+---
+SELECT * FROM tags
+WHERE category IN (0, 3, 4)
+AND count >= 200
+ORDER BY count DESC
+---

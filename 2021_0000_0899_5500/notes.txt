@@ -1,0 +1,7 @@
+0000-0899 compresi: train
+0900-0969 compresi: riservati per usi futuri
+0970-0999 compresi: validation
+
+Samples per shard: 1024
+0000-0899 compresi: (3122462 // 1024) * 1024 = 3122176 immagini, o 3049 shards; batch size 32 * 8 = 12196 steps
+0970-0999 compresi: (104303 // 1024) * 1024  = 103424  immagini, o 101  shards; batch size 32 * 8 = 404   steps
