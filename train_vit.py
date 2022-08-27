@@ -148,9 +148,7 @@ if __name__ == "__main__":
             clip=asl_clip,
         )
         opt = LAMB(
-            learning_rate=warmup_learning_rate,
-            weight_decay_rate=weight_decay_rate,
-            exclude_from_weight_decay=["norm", "skip", "pos_embed"],
+            learning_rate=warmup_learning_rate, weight_decay_rate=weight_decay_rate
         )
         model.compile(optimizer=opt, loss=loss, metrics=[f1, rec_at_p65])
 

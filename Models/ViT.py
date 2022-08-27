@@ -48,8 +48,11 @@ class PosEmbed(tf.keras.layers.Layer):
         return x + self.pos_embed
 
 
-def MLPBlock(x, mlp_dim, prefix=""):
+def MLPBlock(x, mlp_dim, stochdepth_rate, prefix=""):
     out = tf.keras.layers.Dense(mlp_dim, name=f"{prefix}_dense_01")(x)
+    if stochdepth_rate > 0.0:
+        out = StochDepth(stochdepth_rate, scale_by_keep=True)(out)
+
     out = tf.keras.layers.Activation(activation="gelu", name=f"{prefix}_act_01")(out)
     out = tf.keras.layers.Dense(x.shape[-1], name=f"{prefix}_dense_02")(out)
     return out
@@ -70,7 +73,7 @@ def ViTBlock(x, heads, key_dim, mlp_dim, layerscale_init, stochdepth_rate, prefi
     x = tf.keras.layers.Add()([out, x])
 
     out = tf.keras.layers.LayerNormalization(name=f"{prefix}_norm_02")(x)
-    out = MLPBlock(out, mlp_dim, prefix=f"{prefix}_cm")
+    out = MLPBlock(out, mlp_dim, stochdepth_rate, prefix=f"{prefix}_cm")
     out = Base.SkipInitChannelwise(channels=key_dim, init_val=layerscale_init)(out)
 
     if stochdepth_rate > 0.0:
