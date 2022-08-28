@@ -50,10 +50,10 @@ class PosEmbed(tf.keras.layers.Layer):
 
 def MLPBlock(x, mlp_dim, stochdepth_rate, prefix=""):
     out = tf.keras.layers.Dense(mlp_dim, name=f"{prefix}_dense_01")(x)
+    out = tf.keras.layers.Activation(activation="gelu", name=f"{prefix}_act_01")(out)
     if stochdepth_rate > 0.0:
         out = StochDepth(stochdepth_rate, scale_by_keep=True)(out)
 
-    out = tf.keras.layers.Activation(activation="gelu", name=f"{prefix}_act_01")(out)
     out = tf.keras.layers.Dense(x.shape[-1], name=f"{prefix}_dense_02")(out)
     return out
 
