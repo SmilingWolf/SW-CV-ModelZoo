@@ -2,7 +2,7 @@ import argparse
 
 import numpy as np
 import pandas as pd
-
+import re
 
 def filter_old_new(img_tags, img_probs, is_new=False):
     """
@@ -10,7 +10,7 @@ def filter_old_new(img_tags, img_probs, is_new=False):
     is_new = False if model has been trained on danbooru2020
     """
     df2020 = pd.read_csv("2020_0000_0599/selected_tags.csv")
-    df2021 = pd.read_csv("2021_0000_0899/selected_tags.csv")
+    df2021 = pd.read_csv("2021_0000_0899_5500/selected_tags.csv")
 
     names2020 = df2020["name"].tolist()
     names2021 = df2021["name"].tolist()
@@ -32,8 +32,8 @@ def filter_old_new(img_tags, img_probs, is_new=False):
 
 
 def calc_metrics(img_tags, img_probs, thresh):
-    yz = (img_tags > 0).astype(np.uint)
-    pos = (img_probs > thresh).astype(np.uint)
+    yz = (img_tags > 0).astype(np.uint8)
+    pos = (img_probs > thresh).astype(np.uint8)
     pct = pos + 2 * yz
 
     TN = np.sum(pct == 0).astype(np.float32)
@@ -62,6 +62,14 @@ parser.add_argument(
     help="Slice files along axis=1 starting from this index",
 )
 
+parser.add_argument(
+    "-c",
+    "--category",
+    type=int,
+    default=-1,
+    help="Only analyze tags of this category (-1 = all)",
+)
+
 thresh_group = parser.add_mutually_exclusive_group()
 thresh_group.add_argument(
     "-a",
@@ -81,7 +89,13 @@ thresh_group.add_argument(
 args = parser.parse_args()
 
 img_probs = np.load(args.dump)
-img_tags = np.load("2021_0000_0899/encoded_tags_test.npy")
+img_tags = np.load("2021_0000_0899_5500/encoded_tags_test.npy")
+
+if args.category > -1:
+    df = pd.read_csv("2021_0000_0899_5500/selected_tags.csv")
+    indexes = np.where(df["category"] == args.category)[0]
+    img_probs = img_probs[:, indexes]
+    img_tags  = img_tags[:, indexes]
 
 # img_tags, img_probs = filter_old_new(img_tags, img_probs, True)
 
@@ -95,7 +109,7 @@ if args.analyze:
 
     recall = 0.0
     precision = 1.0
-    while round(recall, 4) != round(precision, 4):
+    while not np.isclose(recall, precision):
         threshold = (threshold_max + threshold_min) / 2
         precision, recall = calc_metrics(img_tags, img_probs, threshold)
         if precision > recall:
@@ -107,8 +121,8 @@ if args.analyze:
 else:
     threshold = args.threshold
 
-pos = (img_probs > threshold).astype(np.uint)
-yz = (img_tags > 0).astype(np.uint)
+pos = (img_probs > threshold).astype(np.uint8)
+yz = (img_tags > 0).astype(np.uint8)
 pct = pos + 2 * yz
 
 TN = np.sum(pct == 0).astype(np.float32)
@@ -125,6 +139,8 @@ F2 = 5 * (precision * recall) / ((4 * precision) + recall)
 
 MCC = ((TP * TN) - (FP * FN)) / np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
 
+model_name = re.sub(".*tags_probs_", "", args.dump)
+model_name = model_name.replace(".npy", "")
 d = {
     "thres": threshold,
     "F1": round(F1, 4),
@@ -134,4 +150,4 @@ d = {
     "R": round(recall, 4),
     "P": round(precision, 4),
 }
-print(d)
+print(f"{model_name}: {str(d)}")
