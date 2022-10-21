@@ -17,9 +17,11 @@ Anonymous, The Danbooru Community, & Gwern Branwen; “Danbooru2021: A Large-Sca
 ## Journal
 
 **21/10/2022**:  
-New release today, after a lot of time, many failed experiments, some successes and a whopping final 200 epochs and 24 days of training, TPU time courtesy of TRC.
-ViT in particular was a pain, turns out it is quite sensitive to learning rate. I'm still not 100% sure I nailed it, but right now it works(TM).
+New release today, after a lot of time, many failed experiments, some successes and a whopping final 200 epochs and 24 days of training.  
+TPU time courtesy of [TRC](https://sites.research.google/trc/about/). Thanks!  
+ViT in particular was a pain, turns out it is quite sensitive to learning rate. I'm still not 100% sure I nailed it, but right now it works(TM).  
 While it might look like ConvNext does better, the whole story is a bit more interesting.  
+
 Full results below:
 
 All 5500 tags:
@@ -50,19 +52,19 @@ General tags (category 0), no character or series tags, starting from #2000 and 
 | ConvNextBV1_09_25_2022_05h13m55s | B                 | 93.2M          |          448 |  0.3682 | 0.4320 | 0.3804 |
 | ViTB16_09_25_2022_04h53m38s      | B16               | 90.5M          |          448 |  0.3672 | 0.4416 | 0.3936 |
 
-The numbers are obtained using tools/analyze_metrics.py to first find the point where P ≈ R, then using that threshold to check what scores I get on the less popular tags.  
+The numbers are obtained using [tools/analyze_metrics.py](https://github.com/SmilingWolf/SW-CV-ModelZoo/blob/main/tools/analyze_metrics.py) to first find the point where P ≈ R, then using that threshold to check what scores I get on the less popular tags.  
 ViT blazes past ConvNext when it comes to rarer tags, so you might want to consider that when choosing what model to use.  
-Personally, I ensemble them if I don't have time constraints. That would be ensenble_october in the tables above. Quite some gains.
+Personally, I ensemble them if I don't have time constraints. That would be `ensenble_october` in the tables above. Quite some gains.
 
 Next, I'll be finetuning at least one of these models on the latest tags, and adding NSFW images and tags to the training set, so that it can be used in tandem with Waifu Diffusion.
 
 **21/04/2022**:  
 Checkpointing sweeps and conclusions so far:
-	- NFNets: ECA and SiLU are well worth the extra computational cost. ECA is incredibly cheap on parameters side, too. Using both ECA and SiLU.
-	- NFNets: tested MixUp with alpha = 0.2 and alpha = 0.3, found no particular reason to use alpha 0.3. Using alpha = 0.2.
-	- ConvNext: focal loss: tested a few parameter combinations from the original paper, defaults are good. Using alpha = 0.25 gamma = 2.
-	- ConvNext: losses: tested a few parameter combinations. Best results achieved with ASL with gamma_neg = gamma_pos = clip = 0, which boils down to BCE with the sum of the per-class losses instead of the average. Using ASL with gamma_neg = gamma_pos = clip = 0.
-	- ConvNext: tested cutout_rate = 0.0, cutout_rate = 0.25, cutout_rate = 0.5. Even training for 300 epochs, neither cutout_rate > 0 run ever displayed any advantage against the cutout_rate = 0 run, both overall and at the single class level. Using cutout_rate = 0.0.
+- NFNets: ECA and SiLU are well worth the extra computational cost. ECA is incredibly cheap on parameters side, too. Using both ECA and SiLU.
+- NFNets: tested MixUp with alpha = 0.2 and alpha = 0.3, found no particular reason to use alpha 0.3. Using alpha = 0.2.
+- ConvNext: focal loss: tested a few parameter combinations from the original paper, defaults are good. Using alpha = 0.25 gamma = 2.
+- ConvNext: losses: tested a few parameter combinations. Best results achieved with ASL with gamma_neg = gamma_pos = clip = 0, which boils down to BCE with the sum of the per-class losses instead of the average. Using ASL with gamma_neg = gamma_pos = clip = 0.
+- ConvNext: tested cutout_rate = 0.0, cutout_rate = 0.25, cutout_rate = 0.5. Even training for 300 epochs, neither cutout_rate > 0 run ever displayed any advantage against the cutout_rate = 0 run, both overall and at the single class level. Using cutout_rate = 0.0.
 
 **05/04/2022**:  
 So, I trained a bunch of ConvNexts in the past month.  
