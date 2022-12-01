@@ -1,9 +1,0 @@
-{
-	"image_size": 384,
-    "out_classes": 2380,
-    "definition_name": "L1",
-    "cnn_attention": "eca",
-    "compensate_avgpool_var": true,
-    "activation": "silu",
-	"input_scaling": "inception"
-}
