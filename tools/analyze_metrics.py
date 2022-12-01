@@ -1,8 +1,9 @@
 import argparse
+import re
 
 import numpy as np
 import pandas as pd
-import re
+
 
 def filter_old_new(img_tags, img_probs, is_new=False):
     """
@@ -55,11 +56,19 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-b",
-    "--bottom-index",
+    "-s",
+    "--start-index",
     type=int,
     default=0,
     help="Slice files along axis=1 starting from this index",
+)
+
+parser.add_argument(
+    "-e",
+    "--end-index",
+    type=int,
+    default=-1,
+    help="Slice files along axis=1 ending to this index",
 )
 
 parser.add_argument(
@@ -95,13 +104,18 @@ if args.category > -1:
     df = pd.read_csv("2021_0000_0899_5500/selected_tags.csv")
     indexes = np.where(df["category"] == args.category)[0]
     img_probs = img_probs[:, indexes]
-    img_tags  = img_tags[:, indexes]
+    img_tags = img_tags[:, indexes]
 
 # img_tags, img_probs = filter_old_new(img_tags, img_probs, True)
 
-if args.bottom_index > 0:
-    img_probs = img_probs[:, args.bottom_index :]
-    img_tags = img_tags[:, args.bottom_index :]
+end_index = args.end_index
+if end_index == -1:
+    end_index = img_probs.shape[1]
+
+img_probs = img_probs[:, args.start_index : end_index]
+img_tags = img_tags[:, args.start_index : end_index]
+
+assert img_probs.shape[1] > 0
 
 if args.analyze:
     threshold_min = 0.1
