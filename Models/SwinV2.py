@@ -18,7 +18,7 @@ class StochDepth(tf.keras.Model):
 
         batch_size = tf.shape(x)[0]
         r = tf.random.uniform(shape=[batch_size, 1, 1], dtype=x.dtype)
-        keep_prob = 1.0 - self.drop_rate
+        keep_prob = tf.cast(1.0 - self.drop_rate, dtype=self._compute_dtype)
         binary_tensor = tf.floor(keep_prob + r)
         if self.scale_by_keep:
             x = x / keep_prob
@@ -139,6 +139,8 @@ class WindowAttention(tf.keras.layers.Layer):
         self.pretrained_window_size = pretrained_window_size
         self.num_heads = num_heads
 
+        self.logit_max = tf.cast(tf.math.log(1.0 / 0.01), dtype=self._compute_dtype)
+
         logit_init = tf.keras.initializers.Constant(tf.math.log(10.0))
         self.logit_scale = self.add_weight(
             name=f"{self.name}/logit_scale",
@@ -257,9 +259,7 @@ class WindowAttention(tf.keras.layers.Layer):
         attn = tf.math.l2_normalize(q, axis=-1) @ tf.transpose(
             tf.math.l2_normalize(k, axis=-1), (0, 1, 3, 2)
         )
-        logit_scale = tf.math.exp(
-            tf.math.minimum(self.logit_scale, tf.math.log(1.0 / 0.01))
-        )
+        logit_scale = tf.math.exp(tf.math.minimum(self.logit_scale, self.logit_max))
         attn = attn * logit_scale
 
         relative_position_bias_table = self.cpb_mlp(self.relative_coords_table)
