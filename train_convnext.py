@@ -57,6 +57,7 @@ if __name__ == "__main__":
     max_learning_rate = 5e-4 * multiplier
     warmup_learning_rate = max_learning_rate * 0.1
     final_learning_rate = max_learning_rate * 0.01
+    weight_decay_rate = 0.005
 
     # Model definition
     definition_name = "T"
@@ -86,6 +87,7 @@ if __name__ == "__main__":
         "max_learning_rate": max_learning_rate,
         "warmup_learning_rate": warmup_learning_rate,
         "final_learning_rate": final_learning_rate,
+        "weight_decay_rate": weight_decay_rate,
         "definition_name": definition_name,
         "cnn_attention": cnn_attention,
         "activation": activation,
@@ -152,7 +154,9 @@ if __name__ == "__main__":
             gamma_pos=asl_gamma_pos,
             clip=asl_clip,
         )
-        opt = LAMB(learning_rate=warmup_learning_rate, weight_decay_rate=0.05)
+        opt = LAMB(
+            learning_rate=warmup_learning_rate, weight_decay_rate=weight_decay_rate
+        )
         model.compile(optimizer=opt, loss=loss, metrics=[f1, rec_at_p65])
 
     t800 = tf.keras.callbacks.TerminateOnNaN()
