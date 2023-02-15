@@ -14,17 +14,11 @@ from Models.SwinV2 import SwinV2
 
 def scheduler(epoch, lr):
     if epoch < warmup_epochs:
-        return (
-            warmup_learning_rate
-            + ((max_learning_rate - warmup_learning_rate) / (warmup_epochs - 1)) * epoch
-        )
+        linear_decay = (max_learning_rate - warmup_learning_rate) / warmup_epochs
+        return warmup_learning_rate + linear_decay * epoch
     else:
-        cosine_decay = 0.5 * (
-            1
-            + tf.math.cos(
-                np.pi * (epoch - warmup_epochs) / (total_epochs - warmup_epochs)
-            )
-        )
+        pi_decay = (epoch - warmup_epochs) / max((total_epochs - 1 - warmup_epochs), 1)
+        cosine_decay = 0.5 * (1 + tf.math.cos(np.pi * pi_decay))
         alpha = final_learning_rate / max_learning_rate
         decayed = (1 - alpha) * cosine_decay + alpha
         return max_learning_rate * decayed
