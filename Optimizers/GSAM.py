@@ -2,10 +2,8 @@
    Heavily based on the Keras implementation of SAM [1]
    and JAX implementation of GSAM [2].
 
-   Main difference from Keras SAM is the mini batch aggregation step,
-   I'm averaging the mini batch gradients instead of summing them.
-   Also epsilon is increased from 1e-12 to 1e-7 to improve stability
-   with mixed precision training.
+   Main difference from Keras SAM: epsilon is increased from 1e-12 to 1e-7
+   to improve stability with mixed precision training.
 
    Reference:
      [1] https://github.com/keras-team/keras/blob/v2.10.0/keras/models/sharpness_aware_minimization.py
@@ -118,7 +116,7 @@ class GapSharpnessAwareMinimization(Model):
 
         gradients = []
         for gradient_all_batches in gradients_all_batches:
-            gradients.append(tf.math.reduce_mean(gradient_all_batches, axis=0))
+            gradients.append(tf.math.reduce_sum(gradient_all_batches, axis=0))
         self.optimizer.apply_gradients(zip(gradients, trainable_variables))
 
         pred = tf.concat(pred_all_batches, axis=0)
