@@ -35,12 +35,8 @@ def asymmetric_loss(y_true, y_pred, gamma_neg=4, gamma_pos=0, clip=0.05, eps=1e-
         xs_neg = tf.clip_by_value(xs_neg + clip, clip_value_min=0, clip_value_max=1)
 
     # Basic CE calculation
-    los_pos = y_true * tf.math.log(
-        tf.clip_by_value(xs_pos, clip_value_min=eps, clip_value_max=1)
-    )
-    los_neg = (1 - y_true) * tf.math.log(
-        tf.clip_by_value(xs_neg, clip_value_min=eps, clip_value_max=1)
-    )
+    los_pos = y_true * tf.math.log(tf.math.maximum(xs_pos, eps))
+    los_neg = (1 - y_true) * tf.math.log(tf.math.maximum(xs_neg, eps))
     loss = los_pos + los_neg
 
     # Asymmetric Focusing
