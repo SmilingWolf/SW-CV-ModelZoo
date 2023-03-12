@@ -16,6 +16,7 @@ import tensorflow as tf
 from keras.engine import data_adapter
 from keras.layers import deserialize as deserialize_layer
 from keras.models import Model
+from keras.utils import generic_utils
 
 
 class GapSharpnessAwareMinimization(Model):
@@ -130,7 +131,7 @@ class GapSharpnessAwareMinimization(Model):
         config = super().get_config()
         config.update(
             {
-                "model": serialize_keras_object(self.model),
+                "model": generic_utils.serialize_keras_object(self.model),
                 "rho_max": self.rho_max,
                 "rho_min": self.rho_min,
                 "alpha": self.alpha,
