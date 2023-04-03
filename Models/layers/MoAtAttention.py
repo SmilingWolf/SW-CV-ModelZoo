@@ -245,7 +245,7 @@ class TrailDense(tf.keras.layers.Layer):
         return output
 
 
-class Attention(tf.keras.layers.Layer):
+class MoAtAttention(tf.keras.layers.Layer):
     """Implementation of Attention.
 
     This layer performs global self-attention [1] on the input. The input shape

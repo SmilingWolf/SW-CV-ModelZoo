@@ -59,16 +59,10 @@ class MoAtUnwindower(tf.keras.layers.Layer):
 def SEBlock(x, se_filters, prefix=""):
     c = x.shape[-1]
 
-    attn = tf.keras.layers.GlobalAveragePooling2D(keepdims=True, name=f"{prefix}_gap")(
-        x
-    )
-    attn = tf.keras.layers.Conv2D(
-        filters=se_filters, kernel_size=1, name=f"{prefix}_conv2d_01"
-    )(attn)
+    attn = tf.keras.layers.GlobalAveragePooling2D(name=f"{prefix}_gap")(x)
+    attn = tf.keras.layers.Dense(units=se_filters, name=f"{prefix}_dense_01")(attn)
     attn = tf.keras.layers.Activation("gelu", name=f"{prefix}_act_01")(attn)
-    attn = tf.keras.layers.Conv2D(filters=c, kernel_size=1, name=f"{prefix}_conv2d_02")(
-        attn
-    )
+    attn = tf.keras.layers.Dense(units=c, name=f"{prefix}_dense_02")(attn)
     attn = tf.keras.layers.Activation("sigmoid", name=f"{prefix}_act_02")(attn)
     x = tf.keras.layers.Multiply(name=f"{prefix}_scaling")([x, attn])
     return x
@@ -137,8 +131,9 @@ def MoAtBlock(
     strides,
     se_ratio,
     head_size,
-    window_shape,
+    window_side,
     stochdepth_rate,
+    use_pe,
     prefix="",
 ):
     x = MBConvBlock(
@@ -150,28 +145,26 @@ def MoAtBlock(
 
         out = tf.keras.layers.LayerNormalization(name=f"{prefix}_ln")(x)
 
-        if window_shape is not None:
-            window_height = window_shape[0]
-            window_width = window_shape[1]
+        if window_side is not None:
             out = MoAtWindower(
-                window_height=window_height,
-                window_width=window_width,
+                window_height=window_side,
+                window_width=window_side,
                 name=f"{prefix}_window",
             )(out)
 
-        out = MoAtAttention.Attention(
+        out = MoAtAttention.MoAtAttention(
             hidden_size=filters,
             head_size=head_size,
-            relative_position_embedding_type="2d_multi_head",
+            relative_position_embedding_type="2d_multi_head" if use_pe else None,
             name=f"{prefix}_attention",
         )(out)
 
-        if window_shape is not None:
+        if window_side is not None:
             out = MoAtUnwindower(
                 height=h,
                 width=w,
-                window_height=window_height,
-                window_width=window_width,
+                window_height=window_side,
+                window_width=window_side,
                 name=f"{prefix}_unwindow",
             )(out)
         else:
@@ -225,6 +218,8 @@ def MoAt(
     out_classes=2000,
     definition_name="MoAt2",
     input_scaling="inception",
+    window_sides=[None, None, 14, None],
+    use_pe=False,
 ):
     definition = definitions[definition_name]
     stem_filters = definition["stem_filters"]
@@ -236,12 +231,6 @@ def MoAt(
     num_blocks = sum(definition["blocks"])
 
     head_size = 32
-    window_shapes = [
-        None,
-        None,
-        [in_shape[0] // 16, in_shape[1] // 16],
-        None,
-    ]
 
     img_input = tf.keras.layers.Input(shape=in_shape)
     x = Base.input_scaling(method=input_scaling)(img_input)
@@ -249,8 +238,8 @@ def MoAt(
     x = MoAtStem(x, stem_filters)
 
     full_index = 0
-    for (i, stage), block_type, mb_dim, window_shape in zip(
-        enumerate(blocks), block_types, filters, window_shapes
+    for (i, stage), block_type, mb_dim, window_side in zip(
+        enumerate(blocks), block_types, filters, window_sides
     ):
         for j in range(stage):
             prefix = f"stage{i}_block{j}"
@@ -264,8 +253,9 @@ def MoAt(
                 strides,
                 se_ratio,
                 head_size,
-                window_shape,
+                window_side,
                 block_stochdepth_rate,
+                use_pe,
                 prefix,
             )
             full_index += 1
