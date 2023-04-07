@@ -203,13 +203,34 @@ def MoAtStem(x, stem_filters):
 
 
 definitions = {
+    "MoAt0": {
+        "stem_filters": 64,
+        "blocks": [2, 3, 7, 2],
+        "block_types": ["mb", "mb", "moat", "moat"],
+        "filters": [96, 192, 384, 768],
+        "stochdepth_rate": 0.1,
+    },
+    "MoAt1": {
+        "stem_filters": 64,
+        "blocks": [2, 6, 14, 2],
+        "block_types": ["mb", "mb", "moat", "moat"],
+        "filters": [96, 192, 384, 768],
+        "stochdepth_rate": 0.2,
+    },
     "MoAt2": {
         "stem_filters": 128,
         "blocks": [2, 6, 14, 2],
         "block_types": ["mb", "mb", "moat", "moat"],
         "filters": [128, 256, 512, 1024],
-        "stochdepth_rate": 0.2,
-    }
+        "stochdepth_rate": 0.3,
+    },
+    "MoAt3": {
+        "stem_filters": 160,
+        "blocks": [2, 12, 28, 2],
+        "block_types": ["mb", "mb", "moat", "moat"],
+        "filters": [160, 320, 640, 1280],
+        "stochdepth_rate": 0.6,
+    },
 }
 
 
@@ -218,15 +239,16 @@ def MoAt(
     out_classes=2000,
     definition_name="MoAt2",
     input_scaling="inception",
-    window_sides=[None, None, 14, None],
+    window_sides=[None, None, 20, None],
     use_pe=False,
+    **kwargs,
 ):
     definition = definitions[definition_name]
     stem_filters = definition["stem_filters"]
     blocks = definition["blocks"]
     block_types = definition["block_types"]
     filters = definition["filters"]
-    stochdepth_rate = definition["stochdepth_rate"]
+    stochdepth_rate = kwargs.get("stochdepth_rate", definition["stochdepth_rate"])
 
     num_blocks = sum(definition["blocks"])
 
