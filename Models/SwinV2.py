@@ -42,9 +42,9 @@ class Mlp(tf.keras.layers.Layer):
         self.act_layer = act_layer
         self.drop_rate = drop_rate
 
-        self.fc1 = tf.keras.layers.Dense(self.hidden_features)
+        self.fc1 = tf.keras.layers.Dense(self.hidden_features, name="dense_0")
         self.act = tf.keras.layers.Activation(self.act_layer)
-        self.fc2 = tf.keras.layers.Dense(self.out_features)
+        self.fc2 = tf.keras.layers.Dense(self.out_features, name="dense_1")
         self.drop = tf.keras.layers.Dropout(self.drop_rate)
 
     def call(self, x, training=None):
@@ -142,25 +142,28 @@ class WindowAttention(tf.keras.layers.Layer):
         self.window_size = window_size  # Wh, Ww
         self.pretrained_window_size = pretrained_window_size
         self.num_heads = num_heads
+        self.qkv_bias = qkv_bias
 
         self.logit_max = tf.cast(tf.math.log(1.0 / 0.01), dtype=self._compute_dtype)
 
-        logit_init = tf.keras.initializers.Constant(tf.math.log(10.0))
-        self.logit_scale = self.add_weight(
-            name=f"{self.name}/logit_scale",
-            shape=(num_heads, 1, 1),
-            initializer=logit_init,
-            trainable=True,
+        cpb_mlp_dense1 = tf.keras.layers.Dense(
+            512,
+            use_bias=True,
+            name="cpb_mlp/dense_0",
+        )
+        cpb_mlp_act = tf.keras.layers.Activation("relu", name="cpb_mlp/relu")
+        cpb_mlp_dense2 = tf.keras.layers.Dense(
+            self.num_heads,
+            use_bias=False,
+            name="cpb_mlp/dense_1",
         )
 
-        # mlp to generate continuous relative position bias
-        self.cpb_mlp = tf.keras.Sequential(
-            [
-                tf.keras.layers.Dense(512, use_bias=True),
-                tf.keras.layers.Activation("relu"),
-                tf.keras.layers.Dense(num_heads, use_bias=False),
-            ]
-        )
+        # MLP to generate continuous relative position bias
+        self.cpb_mlp = [
+            cpb_mlp_dense1,
+            cpb_mlp_act,
+            cpb_mlp_dense2,
+        ]
 
         relative_coords_h = range(-(self.window_size[0] - 1), self.window_size[0])
         relative_coords_w = range(-(self.window_size[1] - 1), self.window_size[1])
@@ -227,29 +230,45 @@ class WindowAttention(tf.keras.layers.Layer):
         relative_position_index = tf.math.reduce_sum(relative_coords, axis=-1)
         self.relative_position_index = relative_position_index
 
-        self.qkv = tf.keras.layers.Dense(dim * 3, use_bias=False)
-        if qkv_bias:
+        self.qkv = tf.keras.layers.Dense(dim * 3, use_bias=False, name="qkv")
+
+        self.attn_drop = tf.keras.layers.Dropout(attn_drop)
+        self.proj = tf.keras.layers.Dense(dim, use_bias=True, name="proj")
+        self.proj_drop = tf.keras.layers.Dropout(proj_drop)
+        self.softmax = tf.keras.layers.Softmax(axis=-1)
+
+    def build(self, input_shape):
+        logit_init = tf.keras.initializers.Constant(tf.math.log(10.0))
+        self.logit_scale = self.add_weight(
+            name="logit_scale",
+            shape=(self.num_heads, 1, 1),
+            initializer=logit_init,
+            trainable=True,
+        )
+
+        if self.qkv_bias:
             self.q_bias = self.add_weight(
-                name=f"{self.name}/q_bias", shape=(dim,), initializer="zeros"
+                name="q_bias",
+                shape=(self.dim,),
+                initializer="zeros",
             )
             self.v_bias = self.add_weight(
-                name=f"{self.name}/v_bias", shape=(dim,), initializer="zeros"
+                name="v_bias",
+                shape=(self.dim,),
+                initializer="zeros",
             )
         else:
             self.q_bias = None
             self.v_bias = None
 
-        self.attn_drop = tf.keras.layers.Dropout(attn_drop)
-        self.proj = tf.keras.layers.Dense(dim, use_bias=True)
-        self.proj_drop = tf.keras.layers.Dropout(proj_drop)
-        self.softmax = tf.keras.layers.Softmax(axis=-1)
+        self.built = True
 
     def call(self, x, training=None, mask=None):
         input_shape = tf.shape(x)
         B_, N, C = input_shape[0], input_shape[1], input_shape[2]
 
         qkv = self.qkv(x)
-        if self.q_bias is not None:
+        if self.qkv_bias:
             qkv_bias = tf.concat(
                 (
                     self.q_bias,
@@ -271,9 +290,13 @@ class WindowAttention(tf.keras.layers.Layer):
         logit_scale = tf.math.exp(tf.math.minimum(self.logit_scale, self.logit_max))
         attn = attn * logit_scale
 
-        relative_position_bias_table = self.cpb_mlp(self.relative_coords_table)
+        relative_position_bias_table = self.relative_coords_table
+        for layer in self.cpb_mlp:
+            relative_position_bias_table = layer(relative_position_bias_table)
+
         relative_position_bias_table = tf.reshape(
-            relative_position_bias_table, (-1, self.num_heads)
+            relative_position_bias_table,
+            (-1, self.num_heads),
         )
 
         # Wh*Ww,Wh*Ww,nH
@@ -362,7 +385,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             0 <= self.shift_size < self.window_size
         ), "shift_size must in 0-window_size"
 
-        self.norm1 = norm_layer(epsilon=1e-5)
+        self.norm1 = norm_layer(epsilon=1e-5, name="norm1")
         self.attn = WindowAttention(
             dim,
             window_size=(self.window_size, self.window_size),
@@ -371,6 +394,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             attn_drop=attn_drop,
             proj_drop=drop,
             pretrained_window_size=(pretrained_window_size, pretrained_window_size),
+            name="attn",
         )
 
         self.drop_path = (
@@ -378,13 +402,14 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             if drop_path > 0.0
             else tf.keras.layers.Layer()
         )
-        self.norm2 = norm_layer(epsilon=1e-5)
+        self.norm2 = norm_layer(epsilon=1e-5, name="norm2")
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(
             in_features=dim,
             hidden_features=mlp_hidden_dim,
             act_layer=act_layer,
             drop_rate=drop,
+            name="mlp",
         )
 
         if self.shift_size > 0:
@@ -503,8 +528,12 @@ class PatchMerging(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.input_resolution = input_resolution
         self.dim = dim
-        self.reduction = tf.keras.layers.Dense(2 * dim, use_bias=False)
-        self.norm = norm_layer(epsilon=1e-5)
+        self.reduction = tf.keras.layers.Dense(
+            2 * dim,
+            use_bias=False,
+            name="reduction",
+        )
+        self.norm = norm_layer(epsilon=1e-5, name="norm")
 
     def call(self, x, training=None):
         """
