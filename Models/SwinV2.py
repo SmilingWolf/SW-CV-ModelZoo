@@ -249,15 +249,20 @@ class WindowAttention(tf.keras.layers.Layer):
         B_, N, C = input_shape[0], input_shape[1], input_shape[2]
 
         qkv = self.qkv(x)
+        if self.q_bias is not None:
+            qkv_bias = tf.concat(
+                (
+                    self.q_bias,
+                    tf.zeros_like(self.q_bias),
+                    self.v_bias,
+                ),
+                axis=0,
+            )
+            qkv = qkv + qkv_bias
 
         qkv = tf.reshape(qkv, (B_, N, 3, self.num_heads, -1))
         qkv = tf.transpose(qkv, (2, 0, 3, 1, 4))
         q, k, v = qkv[0], qkv[1], qkv[2]
-
-        qkv_bias = None
-        if self.q_bias is not None:
-            q = tf.math.add(q, tf.reshape(self.q_bias, (self.num_heads, 1, -1)))
-            v = tf.math.add(v, tf.reshape(self.v_bias, (self.num_heads, 1, -1)))
 
         # cosine attention
         attn = tf.math.l2_normalize(q, axis=-1) @ tf.transpose(
