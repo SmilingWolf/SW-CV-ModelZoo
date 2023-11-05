@@ -109,6 +109,10 @@ def window_reverse(windows, window_size, H, W):
     return x
 
 
+def log_n(x, n):
+    return tf.math.log(x) / tf.math.log(tf.cast(n, x.dtype))
+
+
 class WindowAttention(tf.keras.layers.Layer):
     r"""Window based multi-head self attention (W-MSA) module with relative position bias.
     It supports both of shifted and non-shifted window.
@@ -190,8 +194,8 @@ class WindowAttention(tf.keras.layers.Layer):
         relative_coords_table *= 8
         relative_coords_table = (
             tf.math.sign(relative_coords_table)
-            * tf.math.log(tf.math.abs(relative_coords_table) + 1.0)
-            / np.log(8)
+            * log_n(tf.math.abs(relative_coords_table) + 1.0, 2)
+            / np.log2(8)
         )
         self.relative_coords_table = relative_coords_table
 
@@ -679,7 +683,7 @@ def SwinTransformerV2(
             pretrained_window_size=pretrained_window_sizes[i_layer],
         )
 
-    x = norm_layer(name="predictions_norm")(x)
+    x = norm_layer(epsilon=1e-5, name="predictions_norm")(x)
     x = tf.keras.layers.GlobalAveragePooling1D(name="predictions_globalavgpooling")(x)
 
     if num_classes > 0:
