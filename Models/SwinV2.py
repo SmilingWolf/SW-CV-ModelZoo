@@ -567,6 +567,7 @@ def BasicLayer(
     depth,
     num_heads,
     window_size,
+    name,
     mlp_ratio=4.0,
     qkv_bias=True,
     drop=0.0,
@@ -608,11 +609,17 @@ def BasicLayer(
             drop_path=drop_path[i] if isinstance(drop_path, list) else drop_path,
             norm_layer=norm_layer,
             pretrained_window_size=pretrained_window_size,
+            name=f"{name}/swin_transformer_block_{i}",
         )(x)
 
     # patch merging layer
     if downsample is not None:
-        x = downsample(input_resolution, dim=dim, norm_layer=norm_layer)(x)
+        x = downsample(
+            input_resolution,
+            dim=dim,
+            norm_layer=norm_layer,
+            name=f"{name}/patch_merging",
+        )(x)
     return x
 
 
@@ -715,6 +722,7 @@ def SwinTransformerV2(
             norm_layer=norm_layer,
             downsample=PatchMerging if (i_layer < num_layers - 1) else None,
             pretrained_window_size=pretrained_window_sizes[i_layer],
+            name=f"swin_body_{i_layer}",
         )
 
     x = norm_layer(epsilon=1e-5, name="predictions_norm")(x)
